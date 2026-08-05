@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/.claude/skills/legion/**)",
+      "Edit(/.claude/skills/new-story/**)",
+      "Edit(/.claude/skills/new-lesson/**)",
+      "Edit(/.claude/skills/investigate/**)",
+      "Edit(/.claude/skills/new-objective/**)",
+      "Edit(/.claude/skills/patterns-and-smells/**)",
+      "Edit(/.claude/skills/security-guide/**)",
+      "Edit(/.claude/skills/data-guide/**)",
+      "WebSearch"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+# The base repo and worktrees are managed by their own git: not versioned here.
+/workspace/*
+!/workspace/README.md
+
+# Local Claude Code permissions config (contains paths/approvals for this machine).
+.claude/settings.local.json
