@@ -78,14 +78,23 @@ Run the dynamic orchestration of the multi-agent system. You act as the **Orches
     - Pay special attention to the pre-analysis's `COORDINATION_POINTS`.
 17. **Migration coordination (mandatory, global counter)** (only if `config.md` indicates the project uses a migration tool): every proposal with a schema change declares its migrations (tables/collections, type of each change, proposed constraint/index names). Check for collisions (same table, repeated names) and **assign the final identifiers/names** following the ordering rule from `config.md`. The counter **crosses batches**: every migration in batch N+1 carries an identifier later than those of batch N.
 18. If there was a conflict of approaches, record the decision in `.orchestrator/decisions/DEC-NNN.md` (context, alternatives, criteria, decision).
-19. **Persist each design** in `.orchestrator/designs/<Story-ID>.md`. If the story does **not** have `## Subtasks`, a single block:
+19. **Persist each design** in `.orchestrator/designs/<Story-ID>.md`. **If the base repo has actual source code** (any language — verify against the real files, never assume), each row of "Components (create/modify)" MUST be followed by a short fenced code block in that language/syntax (function/method signature, class/interface skeleton, or a 5–15 line sketch of the critical logic — not the full implementation) so the design is judgeable on its own, not just a list of names. Assigned migrations get the same treatment: a sketch of the actual DDL/schema statement, not just the table/column names.
+    **If the User Story has no code involved** (pure content/config/translation/docs — the same criterion `worktree-agent-docs` already uses to know it's a documentation-only story), **omit the whole `### Code sketches` subsection outright** (and the migration code fence, if there's no schema change either) — same treatment as "`## Assigned migrations (if applicable)`" when there's no migration: the header doesn't appear empty, it's simply not written. Never leave a dangling section title with no content underneath. If the story does **not** have `## Subtasks`, a single block:
     ```md
     # Design Story <ID> — batch <n>
     **Status: PENDING APPROVAL | APPROVED | APPROVED WITH ADJUSTMENTS | DISCARDED**
     ## Solution summary
     ## Components (create/modify)
     | Component | Type | Location | Approach | Problem it solves | Origin (new / replica) |
+    ### Code sketches
+    #### <Component name>
+    ```<language>
+    <signature / skeleton / 5–15 line sketch>
+    ```
     ## Assigned migrations (if applicable)
+    ```<migration-language>
+    <DDL/schema statement sketch>
+    ```
     ## Gate adjustments
     ## Estimated size
     ```
@@ -99,7 +108,15 @@ Run the dynamic orchestration of the multi-agent system. You act as the **Orches
     ### Solution summary
     ### Components (create/modify)
     | Component | Type | Location | Approach | Problem it solves | Origin (new / replica) |
+    #### Code sketches
+    ##### <Component name>
+    ```<language>
+    <signature / skeleton / 5–15 line sketch>
+    ```
     ### Assigned migrations (if applicable)
+    ```<migration-language>
+    <DDL/schema statement sketch>
+    ```
     ### Gate adjustments
 
     ## Subtask 2 — [domain] (depends on 1)
