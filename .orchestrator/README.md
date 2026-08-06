@@ -109,6 +109,17 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
 
   Recalculated at the Closure of each orchestration run, when `/new-lesson` records a finding with an identifiable story, and when Phase 6 adds a correction round. Permanent memory, never resets.
 
+- `metrics.md` — duration and token consumption, **read-only for the user, same as `reputation.md`**: the orchestrator never consults it to decide anything. Format:
+
+  ```md
+  | Date | Stories | Total duration | Total tokens | Slowest batch |
+  | Story | Agent | Model | Total duration | Time at gate | Review rounds | Tokens (implementation) | Tokens (review) |
+  | Agent | Average duration | Average tokens | Stories processed |
+  ## Bottlenecks detected (last orchestration run)
+  ```
+
+  Recalculated at the Closure of each orchestration run, from the timestamps already present in `events/<Story-ID>.md`, from `subagent_tokens`/`tool_uses`/`duration_ms` the `Agent` tool returns when each subagent completes, and from the `model` the Orchestrator itself passed on that `Agent` call (or "inherited" if it omitted the override) — no new instrumentation required. Permanent memory, never resets.
+
 ## Worktree infrastructure (doesn't live in `.orchestrator/`, but the board references it)
 
 Worktrees live in `workspace/worktrees/<Story-ID>/`, created and removed exclusively by the
@@ -133,7 +144,7 @@ incomplete agents in `RESUMED` mode (they continue on their existing worktree, n
 
 **Closure**: once the queue is empty with all stories `finalized` and `APPROVED`, the Orchestrator runs a
 **read-only trial-merge** (`git merge-tree`) to verify the branches merge cleanly with each other
-and against the base branch, recalculates `reputation.md`, and reports the final summary. Worktrees are **not
+and against the base branch, recalculates `reputation.md` and `metrics.md`, and reports the final summary. Worktrees are **not
 removed** upon closure: the uncommitted work lives only there until the user harvests it.
 
 **Phase 6 (post-closure)**: after the final summary, the Orchestrator asks whether the user wants to request

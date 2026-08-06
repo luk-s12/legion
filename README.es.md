@@ -107,7 +107,7 @@ Recomendación: **dry-run para historias de usuario grandes, ambiguas o que pued
 7. **Verificación funcional (opcional)**: en historias de usuario con criterios de aceptación complejos, `worktree-agent-qa` deriva escenarios reales y los corre antes de pasar al revisor.
 8. **Revisión adversaria**: al terminar cada historia de usuario, un revisor independiente re-ejecuta las verificaciones, audita las reglas de arquitectura y la checklist de smells. Rechazado → el agente corrige (máx. 3 rondas, después se escala a vos).
 9. **Rotación de la cola**: historia de usuario aprobada → se libera un slot → entra la siguiente de la cola (respetando `## Depends on`) con su propio worktree.
-10. **Cierre**: consistencia final + **trial-merge** (`git merge-tree`, solo lectura) para verificar que todas las ramas mergean contra la rama base y entre sí + recalcula `.orchestrator/reputation.md`.
+10. **Cierre**: consistencia final + **trial-merge** (`git merge-tree`, solo lectura) para verificar que todas las ramas mergean contra la rama base y entre sí + recalcula `.orchestrator/reputation.md` y `.orchestrator/metrics.md`.
 11. **Corrección post-cierre (opcional)**: te pregunta si querés pedir un cambio sobre alguna historia de usuario ya finalizada — si sí, reengancha al agente original sin repetir configuración/diseño, corre una ronda nueva del revisor, y vuelve a `finalized`.
 
 ## 3. Seguir el progreso
@@ -127,6 +127,7 @@ Todo el estado vive en [.orchestrator/](.orchestrator/):
 - **[lessons-learned.md](.orchestrator/lessons-learned.md)** — incidentes reales por regla de negocio no contemplada, permanente entre ejecuciones (alimentado por `/new-lesson`).
 - **objectives/OBJ-`<NNN>`.md** — descomposición de un objetivo de alto nivel en historias de usuario, con su razonamiento (generado por `/new-objective`).
 - **[reputation.md](.orchestrator/reputation.md)** — auditoría de solo lectura por agente/dominio (tasa de aprobación en 1ª ronda, hallazgos post-cierre, correcciones post-cierre). El orquestador nunca la consulta para decidir nada — es para que vos sepas qué ajustar del sistema.
+- **[metrics.md](.orchestrator/metrics.md)** — duración y consumo de tokens por historia/tanda/orquestación, también de solo lectura (mismo criterio que `reputation.md`), calculado a partir de los timestamps de `events/` y del `subagent_tokens`/`duration_ms` que devuelve cada subagente al terminar.
 
 ## 4. Si se corta la sesión
 
