@@ -42,6 +42,8 @@ The problem this part solves: two worktrees (two different User Stories) solve a
 
 Before proposing a new approach, look at how the project ALREADY solves similar problems (read real code, don't assume). If an established convention exists — a shared hook/composable, a utility module, a feature-folder pattern, a common data-access layer — **use it**, don't invent an alternative. This matters more than any criterion below: consistency with the rest of the code wins.
 
+**Replication criterion (when the convention comes from ANOTHER project)**: replicating a reference pattern means replicating its DESIGN (beans/structure, the pattern's own naming, property contracts), not its accidents. For every inherited detail (visibility, annotation, identifier language, property semantics, `@Primary`-style markers) ask: *does this detail have a reason to exist in the origin that ALSO applies here?* If the reason exists there but not here (e.g. `@Primary` justified by two coexisting factories in the origin, single factory here), don't inherit it. If it has no reason anywhere (e.g. a helper left package-private by oversight), do NOT inherit it — fix it in the replica and, where visible, suggest fixing the origin. An inherited detail without a reason is a smell, not consistency.
+
 If the project has no clear convention for the problem at hand, apply these criteria in order (see concrete examples per paradigm in `references/paradigms/`):
 
 1. **Is the logic pure (same input → same output, no side effects or external dependencies)?** → extract it to an independent function/module, testable in isolation. Don't mix it with code that does have effects (network, DOM, database).

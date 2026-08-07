@@ -4,3 +4,6 @@
 
 # Local Claude Code permissions config (contains paths/approvals for this machine).
 .claude/settings.local.json
+
+# Custom
+feature/*
