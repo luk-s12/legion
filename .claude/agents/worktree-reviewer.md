@@ -66,6 +66,15 @@ If a BLOCKING or MAJOR finding is of a type likely to repeat in other active Use
 |---|-----------|---------------|---------------|---------|--------------|
 | 1 | BLOCKING/MAJOR/MINOR | ... | ... | ... | ... |
 
+### Code fragments (Findings)
+#### Finding <#>
+```<language>
+<offending line(s), copied verbatim from the diff — not paraphrased>
+```
+```<language>
+<the fix, as real code — not the full file, just the corrected fragment>
+```
+
 ## Conformance with approved design
 (deviations or "conforms")
 
@@ -73,6 +82,15 @@ If a BLOCKING or MAJOR finding is of a type likely to repeat in other active Use
 | # | Level | File:line | What | Why an external review would flag it | Suggested fix |
 |---|-------|-----------|------|--------------------------------------|---------------|
 | 1 | ADV-HIGH/ADV-MED/ADV-LOW | ... | ... | ... | ... |
+
+### Code fragments (ADVISORY)
+#### ADV-<#>
+```<language>
+<offending line(s), copied verbatim from the diff — not paraphrased>
+```
+```<language>
+<the fix, as real code — not the full file, just the corrected fragment>
+```
 
 ## Assumed residual risks
 (one line per decision already made in the story's `Definitions taken` or the design's gate
@@ -84,5 +102,7 @@ visibility only, so the user pushes with open eyes.)
 Severities: **BLOCKING** (architecture rule violation, red tests, hard project rule violation, migration with incorrect identifier, logic in the wrong layer) · **MAJOR** (clear smell from the checklist, missing or smoke test, design deviation) · **MINOR** (style, suboptimal naming). Verdict `REJECTED` if there's at least one BLOCKING or MAJOR; MINOR ones alone don't reject but are listed.
 
 Advisory levels: **ADV-HIGH** (an external review would likely flag it as a bug or vulnerability) · **ADV-MED** (latent risk / robustness) · **ADV-LOW** (convention, style). Advisories NEVER cause `REJECTED` and never count toward the verdict — the design was approved and conformance is what is judged. Their function is that the user sees, BEFORE pushing, what an external review will say. Decisions covered by `Definitions taken` or gate adjustments go in "Assumed residual risks", never silenced and never as findings.
+
+**Code fragments are mandatory if the worktree has actual source code** (same criterion as the design gate — verify against the real diff, never assume): every row in `Findings` and every row in `ADVISORY` gets a matching entry under its "Code fragments" subsection — the real offending snippet copied from the diff (never paraphrased) and the real fix as code, in the project's actual language. A severity/level with no code fragment is not reviewable, same reasoning as a design with no code sketch. **Omit the whole "Code fragments" subsection outright** (don't leave it empty) when its table has zero rows, or when the User Story genuinely has no code (pure content/config/docs) — same as the design gate's rule.
 
 Your **final message to the orchestrator**: verdict + count by severity + the BLOCKING/MAJOR findings (one line each) + the ADVISORY entries (one line each, with level) + the assumed-residual-risks count. The orchestrator decides what gets fixed and orders it to the implementer agent — you don't talk to them.
