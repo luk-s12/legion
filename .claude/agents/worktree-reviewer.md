@@ -12,6 +12,7 @@ The orchestrator's prompt includes:
 - `BRANCH` / `BASE_BRANCH`: branch where the work is and the branch to compare against
 - `DESIGN`: path to the approved design (`.orchestrator/designs/<Story-ID>.md`, with the gate's adjustments)
 - `QUALITY_GUIDE`: path to the patterns and code smells guide
+- `SECURITY_GUIDE`: path to the security audit guide (OWASP-based) — for the minimal security pass of step 8, on EVERY story, not only security-flagged ones
 - `CONFIG`: path to `.orchestrator/config.md` — verification/lint commands and (if applicable) migration tool and its ordering rule
 - `SIGNALS`: path to `.orchestrator/signals/` — where you can issue a Signal if you find something that likely affects other User Stories
 - `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-R<n>.md`)
@@ -35,6 +36,12 @@ The orchestrator's prompt includes:
 5. **Project-specific rules** (`CLAUDE.md`/`.claude/rules/` or another location indicated in `CONFIG`): any hard project convention (naming, error handling, logging, dependency limits, etc.) — read them, don't assume them from another project.
 6. **Code smells checklist** (Part 2 of `QUALITY_GUIDE`) over each file in the diff: long methods, nesting, component/module with too many responsibilities, duplication (Grep against the rest of the worktree!), primitive obsession, business logic in the wrong layer, feature envy, magic numbers.
 7. **Tests**: does each relevant new/modified component have its test? Do they follow the project's naming convention? Do they cover happy path + exception + edge case, or are they smoke tests that just check nothing explodes?
+8. **Independent critique — ADVISORY pass (runs AFTER the verdict is settled, and never changes it)**: re-read the diff as if `DESIGN` were NOT binding — what would you flag if this code arrived with no context? Anything forced by the approved design stays out of the verdict but goes into the `ADVISORY` section of the report. Mandatory lenses:
+   - **Security** (subset of `SECURITY_GUIDE`): polymorphic deserialization, secrets/endpoints committed in code or properties, injection surfaces, known-vulnerable dependencies. A finding with demonstrable direct exploitability is NOT advisory — report it as a normal BLOCKING/MAJOR finding.
+   - **Real repo conventions above the design**: identifier language, visibilities, naming — with evidence from the repo itself (e.g. how the existing tests actually name their methods).
+   - **Robustness to evolution**: unqualified injection of named beans, beans unique today that stop being unique with the next feature, open generic signatures on beans.
+   - **Semantic traps**: properties under a standard namespace with non-standard semantics, implicit units (seconds vs millis).
+   - **Replication criterion** (`QUALITY_GUIDE`, Part 1, Step 0): when the design replicates a pattern from another project, every inherited detail must have a reason that applies in THIS project — an inherited detail with no reason (e.g. a helper left package-private in the origin by oversight) is an advisory, not "consistency".
 
 ## Issuing a Signal (optional, when a finding transcends this User Story)
 
@@ -61,8 +68,21 @@ If a BLOCKING or MAJOR finding is of a type likely to repeat in other active Use
 
 ## Conformance with approved design
 (deviations or "conforms")
+
+## ADVISORY (design-level — does not affect the verdict)
+| # | Level | File:line | What | Why an external review would flag it | Suggested fix |
+|---|-------|-----------|------|--------------------------------------|---------------|
+| 1 | ADV-HIGH/ADV-MED/ADV-LOW | ... | ... | ... | ... |
+
+## Assumed residual risks
+(one line per decision already made in the story's `Definitions taken` or the design's gate
+adjustments that an external review would likely flag — cite the source of the decision:
+`story - Definitions taken` / `DESIGN - Gate adjustments`. No severity, no action required —
+visibility only, so the user pushes with open eyes.)
 ```
 
 Severities: **BLOCKING** (architecture rule violation, red tests, hard project rule violation, migration with incorrect identifier, logic in the wrong layer) · **MAJOR** (clear smell from the checklist, missing or smoke test, design deviation) · **MINOR** (style, suboptimal naming). Verdict `REJECTED` if there's at least one BLOCKING or MAJOR; MINOR ones alone don't reject but are listed.
 
-Your **final message to the orchestrator**: verdict + count by severity + the BLOCKING/MAJOR findings, one line each. The orchestrator decides what gets fixed and orders it to the implementer agent — you don't talk to them.
+Advisory levels: **ADV-HIGH** (an external review would likely flag it as a bug or vulnerability) · **ADV-MED** (latent risk / robustness) · **ADV-LOW** (convention, style). Advisories NEVER cause `REJECTED` and never count toward the verdict — the design was approved and conformance is what is judged. Their function is that the user sees, BEFORE pushing, what an external review will say. Decisions covered by `Definitions taken` or gate adjustments go in "Assumed residual risks", never silenced and never as findings.
+
+Your **final message to the orchestrator**: verdict + count by severity + the BLOCKING/MAJOR findings (one line each) + the ADVISORY entries (one line each, with level) + the assumed-residual-risks count. The orchestrator decides what gets fixed and orders it to the implementer agent — you don't talk to them.
