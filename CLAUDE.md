@@ -38,7 +38,8 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
 │   │   ├── worktree-agent-qa.md            # Post-implementation functional verification
 │   │   ├── worktree-agent-docs.md          # Documentation specialist
 │   │   ├── research-agent.md               # Spikes + prior research (no worktree, read-only)
-│   │   └── worktree-reviewer.md            # Adversarial reviewer (post-FINALIZED, read-only)
+│   │   ├── worktree-reviewer.md            # Adversarial reviewer (post-FINALIZED, read-only)
+│   │   └── design-reviewer.md              # Adversarial design reviewer (dry-run only, pre-implementation, read-only)
 │   └── skills/
 │       ├── legion/SKILL.md        # /legion command
 │       ├── new-objective/SKILL.md      # /new-objective command (splits a high-level objective into several stories)
@@ -59,7 +60,7 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
     ├── metrics.md                   # Duration and token consumption per story/agent/orchestration run (read-only) — does not change orchestrator behavior
     ├── events/<Story-ID>.md           # Event log for each agent (append-only)
     ├── designs/<Story-ID>.md          # Unified design per story (persisted at the gate; dry-run material)
-    ├── reviews/<Story-ID>-Rn.md     # Adversarial reviewer reports (one per round)
+    ├── reviews/<Story-ID>-Rn.md     # Adversarial reviewer reports (one per code round) — and <Story-ID>-Dn.md (design-review rounds, dry-run only)
     ├── decisions/DEC-NNN.md        # Orchestrator's architectural decisions
     ├── signals/<ID>.md              # Priority alerts between worktrees, with expiration (any agent can write)
     └── announcements/<ID>.md            # Reusable knowledge shared on the fly, prior to being consolidated into components.md
@@ -167,7 +168,7 @@ These two mechanisms **do not take authority away from the orchestrator**: it is
 
 **Resumption**: if, at the start of an orchestration run, the board shows stories with a status other than `finalized`/`aborted`, there is an interrupted execution — it is resumed, not restarted: reconstruct context from events + `designs/` + `git -C workspace/<base-repo> worktree list` + real diffs (git is the source of truth), relaunch only the incomplete agents in `RESUMED` mode on their existing worktrees (never recreate them), and reassemble the queue of pending batches.
 
-**Dry-run mode** (`/legion dry-run`): runs through the end of the first batch's gate (including DECs and migration names/order) but does NOT send the approvals — the designs are persisted as reviewable files in `.orchestrator/designs/<Story-ID>.md` (status `PENDING APPROVAL`) and the orchestrator presents the index with links, along with the **complete batch plan** (all stories, not just the first batch). The user reviews them (can annotate them directly in the file) and decides **per story**: approve (with or without adjustments) or discard (the worktree is empty — Stage A doesn't write code — it gets removed and that story ends up `aborted`). A cheap human checkpoint: designing costs a fraction of implementing.
+**Dry-run mode** (`/legion dry-run`): runs through the end of the first batch's gate (including DECs and migration names/order) but does NOT send the approvals — the designs are persisted as reviewable files in `.orchestrator/designs/<Story-ID>.md` (status `PENDING APPROVAL`) and the orchestrator presents the index with links, along with the **complete batch plan** (all stories, not just the first batch). The user reviews them (can annotate them directly in the file) and decides **per story**: approve (with or without adjustments) or discard (the worktree is empty — Stage A doesn't write code — it gets removed and that story ends up `aborted`). After the user approves each design, and before the approval reaches the implementer, the `design-reviewer` agent audits the approved design against the base repo (loop: amend → re-review, no fixed cap; the user can omit each round's findings or disable the loop for the run — omitted findings stay recorded in the design's `## Design review` section and are always passed to `worktree-reviewer`'s "Assumed residual risks" section). A cheap human checkpoint: designing costs a fraction of implementing.
 
 ## Quality gate (non-negotiable)
 
