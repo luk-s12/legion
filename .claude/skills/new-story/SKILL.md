@@ -9,12 +9,13 @@ If what the user brings is a high-level objective where they don't yet know how 
 
 ## Step 1 — Basic data
 
-Ask with `AskUserQuestion` (or take them from the args if already given):
+Take the Story ID and description from the args if the command was invoked with them already (e.g. `/new-story PROJ-100: <description>` or just a free-form description you can extract an implied ID from). **If invoked with no arguments at all, ask for them one field at a time, in two separate turns — never bundle both questions into a single message:**
 
-1. **Story ID** (e.g. `PROJ-100`). Validate:
-   - Format `PREFIX-NUMBER` (or whatever the project uses). If it doesn't comply, ask again.
-   - That it doesn't already exist in `requirements-to-work.md` (if it exists, offer: edit that story or choose another ID).
-2. **Description**: what needs to be done, in the user's own words. Accept it as given — the refinement is yours.
+1. First, resolve the **Story ID** with `AskUserQuestion` (never leave it as a bare open question — that call needs 2-4 concrete options, or it fails):
+   - Scan `requirements-to-work.md` for existing `# Story <ID>` IDs to infer the project's prefix/numbering convention, and compute the next available ID in that sequence.
+   - Offer it as the first, recommended option (e.g. "Use `OS-2` (next available)"). Add a second option such as "Use a different prefix" or another plausible next ID if more than one prefix is already in use. The user can always pick "Other" to type a fully custom ID — that's the built-in escape hatch for anything the two options don't cover.
+   - Validate whatever ID results: format `PREFIX-NUMBER` (or whatever the project uses — ask again if it doesn't comply), and that it doesn't already exist in `requirements-to-work.md` (if it exists, offer: edit that story or choose another ID).
+2. Only once the ID is settled, ask in plain conversational text for the **Description**: what needs to be done, in the user's own words. This one stays plain text — it's a free-form paragraph, not a set of short choices, so `AskUserQuestion` doesn't fit it (save that tool for the real clarifying questions in Step 3).
 
 Before continuing, count the file's real User Stories (`# Story` blocks with content, ignoring "(Replace with...)" placeholders). **There is no limit on the number of User Stories**: this system uses a single base repo + one `git worktree` per story, so adding one more story doesn't break anything — at most it makes `/legion` group it into a later batch if it overlaps with another (the real limit is concurrency, `MAX_PARALLEL`, not quantity).
 
