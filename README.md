@@ -15,7 +15,7 @@ An **Orchestrator Agent** (the Claude Code session in this root folder) coordina
 > **A note on language**:
 > - **Commands, file/folder names, event tokens**: always English (`/legion`, `worktree-agent`, `FINALIZED`...) — never changes.
 > - **Conversation with the agent** (questions, explanations): follows whatever language you write to it in, automatically — nothing to configure.
-> - **Content the agent *persists*** (a story's description, generated docs): follows `.orchestrator/config.md`'s **"Content language"** field — defaults to English, but you can set it to any other language. Independent of the language you chatted in.
+> - **Content the agent *persists*** (a story's description, generated docs): follows `.orchestrator/config.md`'s **`content_language`** field — defaults to English, but you can set it to any other language. Independent of the language you chatted in.
 
 ## Table of contents
 
