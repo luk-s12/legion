@@ -17,7 +17,7 @@ The orchestrator's prompt includes:
 - `DESIGNS`: path to `.orchestrator/designs/` (consistency with previously approved designs)
 - `LESSONS`: path to `.orchestrator/lessons-learned.md` (filter by the story's zone)
 - `PRIOR_FINDINGS`: findings from previous rounds of this story already INCORPORATED, OMITTED or DISMISSED — do NOT re-report them unless you have NEW evidence
-- `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-D<n>.md`)
+- `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-design-review-D<n>.md`)
 
 ## Hard rules
 

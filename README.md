@@ -117,6 +117,8 @@ Recommendation: **dry-run for large, ambiguous stories, or ones that could overl
   <sub>A design persisted at the dry-run gate (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), status <code>PENDING APPROVAL</code></sub>
 </p>
 
+In dry-run, once you approve a design — and before that approval reaches the implementing agent — the `design-reviewer` agent audits it against the real code, one more independent pass while everything is still on paper. If it finds something, you'll get asked (in batches of up to 4) which findings to fold into the design; nothing is silently dropped — whatever you skip is carried forward as a visible residual risk.
+
 ### Available commands
 
 All of them are run in the Claude Code session in this root folder:
@@ -153,7 +155,8 @@ All the state lives in [.orchestrator/](.orchestrator/):
 - **[assignments.md](.orchestrator/assignments.md)** — the board: story, worktree, branch, batch, status (includes `queued`), last activity, review round. Below it: overlap matrix and batch plan.
 - **designs/`<Story-ID>`.md** — the design of each story approved at the gate. In dry-run they stay at `PENDING APPROVAL`: **these are the files you review** to approve or discard each plan (you can annotate adjustments directly in the file).
 - **events/`<Story-ID>`.md** — real-time log for each agent (files created/modified, refactors, decisions).
-- **reviews/`<Story-ID>`-Rn.md** — adversarial reviewer reports per round.
+- **reviews/`<Story-ID>`-code-review-Rn.md** — adversarial reviewer reports per round.
+- **reviews/`<Story-ID>`-design-review-Dn.md** — design reviewer reports per round (dry-run only, before implementation — see [2. Run the implementation](#2-run-the-implementation)).
 - **decisions/DEC-NNN.md** — architectural decisions when two stories solved the same thing differently.
 - **[components.md](.orchestrator/components.md)** — catalog of components reusable across stories/batches (consulted before creating anything new).
 - **signals/`<ID>`.md** — priority alerts between active stories, with expiration if no one reinforces them; any agent writes them directly.
@@ -215,7 +218,8 @@ git status                    # review the work
 │   │   ├── worktree-agent-qa.md            # Post-implementation functional verification
 │   │   ├── worktree-agent-docs.md          # Documentation specialist
 │   │   ├── research-agent.md               # Spikes + prior research (no worktree, read-only)
-│   │   └── worktree-reviewer.md            # Adversarial reviewer (read-only)
+│   │   ├── worktree-reviewer.md            # Adversarial reviewer (post-FINALIZED, read-only)
+│   │   └── design-reviewer.md              # Adversarial design reviewer (dry-run only, pre-implementation, read-only)
 │   └── skills/
 │       ├── legion/               # /legion and /legion dry-run
 │       ├── new-objective/          # /new-objective — splits a high-level objective into several stories

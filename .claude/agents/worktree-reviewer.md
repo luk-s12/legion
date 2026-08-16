@@ -15,7 +15,8 @@ The orchestrator's prompt includes:
 - `SECURITY_GUIDE`: path to the security audit guide (OWASP-based) — for the minimal security pass of step 8, on EVERY story, not only security-flagged ones
 - `CONFIG`: path to `.orchestrator/config.md` — verification/lint commands and (if applicable) migration tool and its ordering rule
 - `SIGNALS`: path to `.orchestrator/signals/` — where you can issue a Signal if you find something that likely affects other User Stories
-- `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-R<n>.md`)
+- `DESIGN_REVIEW_OMISSIONS` (optional — only present if this story went through the dry-run design review loop): the `OMITTED (user)` findings from `DESIGN`'s `## Design review` section. List each one in "Assumed residual risks" (see below) — never as a finding, never re-investigated.
+- `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-code-review-R<n>.md`)
 
 ## Hard rules
 
@@ -93,15 +94,16 @@ If a BLOCKING or MAJOR finding is of a type likely to repeat in other active Use
 ```
 
 ## Assumed residual risks
-(one line per decision already made in the story's `Definitions taken` or the design's gate
-adjustments that an external review would likely flag — cite the source of the decision:
-`story - Definitions taken` / `DESIGN - Gate adjustments`. No severity, no action required —
-visibility only, so the user pushes with open eyes.)
+(one line per decision already made in the story's `Definitions taken`, the design's gate
+adjustments, or a finding the user chose to omit during the dry-run design review loop
+(`DESIGN_REVIEW_OMISSIONS`) — cite the source of the decision: `story - Definitions taken` /
+`DESIGN - Gate adjustments` / `DESIGN - Design review (OMITTED)`. No severity, no action
+required — visibility only, so the user pushes with open eyes.)
 ```
 
 Severities: **BLOCKING** (architecture rule violation, red tests, hard project rule violation, migration with incorrect identifier, logic in the wrong layer) · **MAJOR** (clear smell from the checklist, missing or smoke test, design deviation) · **MINOR** (style, suboptimal naming). Verdict `REJECTED` if there's at least one BLOCKING or MAJOR; MINOR ones alone don't reject but are listed.
 
-Advisory levels: **ADV-HIGH** (an external review would likely flag it as a bug or vulnerability) · **ADV-MED** (latent risk / robustness) · **ADV-LOW** (convention, style). Advisories NEVER cause `REJECTED` and never count toward the verdict — the design was approved and conformance is what is judged. Their function is that the user sees, BEFORE pushing, what an external review will say. Decisions covered by `Definitions taken` or gate adjustments go in "Assumed residual risks", never silenced and never as findings.
+Advisory levels: **ADV-HIGH** (an external review would likely flag it as a bug or vulnerability) · **ADV-MED** (latent risk / robustness) · **ADV-LOW** (convention, style). Advisories NEVER cause `REJECTED` and never count toward the verdict — the design was approved and conformance is what is judged. Their function is that the user sees, BEFORE pushing, what an external review will say. Decisions covered by `Definitions taken`, gate adjustments, or `DESIGN_REVIEW_OMISSIONS` go in "Assumed residual risks", never silenced and never as findings.
 
 **Code fragments are mandatory if the worktree has actual source code** (same criterion as the design gate — verify against the real diff, never assume): every row in `Findings` and every row in `ADVISORY` gets a matching entry under its "Code fragments" subsection — the real offending snippet copied from the diff (never paraphrased) and the real fix as code, in the project's actual language. A severity/level with no code fragment is not reviewable, same reasoning as a design with no code sketch. **Omit the whole "Code fragments" subsection outright** (don't leave it empty) when its table has zero rows, or when the User Story genuinely has no code (pure content/config/docs) — same as the design gate's rule.
 

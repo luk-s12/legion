@@ -117,6 +117,8 @@ Recomendación: **dry-run para historias de usuario grandes, ambiguas o que pued
   <sub>Un diseño persistido en el gate de dry-run (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), estado <code>PENDING APPROVAL</code></sub>
 </p>
 
+En dry-run, una vez que aprobás un diseño — y antes de que esa aprobación llegue al agente implementador — el agente `design-reviewer` lo audita contra el código real, una pasada independiente más mientras todo sigue en papel. Si encuentra algo, te va a preguntar (en lotes de hasta 4) qué hallazgos incorporar al diseño; nada se descarta en silencio — lo que salteés queda registrado como riesgo residual visible.
+
 ### Comandos disponibles
 
 Todos se corren en la sesión de Claude Code de esta carpeta raíz:
@@ -153,7 +155,8 @@ Todo el estado vive en [.orchestrator/](.orchestrator/):
 - **[assignments.md](.orchestrator/assignments.md)** — el tablero: historia de usuario, worktree, rama, tanda, estado (incluye `queued`), última actividad, ronda de revisión. Debajo: matriz de solapamiento y plan de tandas.
 - **designs/`<Story-ID>`.md** — el diseño de cada historia de usuario aprobado en el gate. En dry-run quedan en `PENDING APPROVAL`: **estos son los archivos que revisás** para aprobar o descartar cada plan (podés anotar ajustes directamente en el archivo).
 - **events/`<Story-ID>`.md** — log en tiempo real de cada agente (archivos creados/modificados, refactors, decisiones).
-- **reviews/`<Story-ID>`-Rn.md** — informes del revisor adversario por ronda.
+- **reviews/`<Story-ID>`-code-review-Rn.md** — informes del revisor adversario por ronda.
+- **reviews/`<Story-ID>`-design-review-Dn.md** — informes del revisor de diseño por ronda (solo dry-run, antes de implementar — ver [2. Lanzar la implementación](#2-lanzar-la-implementación)).
 - **decisions/DEC-NNN.md** — decisiones arquitectónicas cuando dos historias de usuario resolvieron lo mismo distinto.
 - **[components.md](.orchestrator/components.md)** — catálogo de componentes reutilizables entre historias de usuario/tandas (se consulta antes de crear nada nuevo).
 - **signals/`<ID>`.md** — alertas de prioridad entre historias de usuario activas, con vencimiento si nadie las refuerza; cualquier agente las escribe directamente.
@@ -215,7 +218,8 @@ git status                    # revisar el trabajo
 │   │   ├── worktree-agent-qa.md            # Verificación funcional post-implementación
 │   │   ├── worktree-agent-docs.md          # Especialista de documentación
 │   │   ├── research-agent.md               # Spikes + investigación previa (sin worktree, solo lectura)
-│   │   └── worktree-reviewer.md            # Revisor adversario (solo lectura)
+│   │   ├── worktree-reviewer.md            # Revisor adversario (post-FINALIZED, solo lectura)
+│   │   └── design-reviewer.md              # Revisor adversario de diseño (solo dry-run, pre-implementación, solo lectura)
 │   └── skills/
 │       ├── legion/             # /legion y /legion dry-run
 │       ├── new-objective/           # /new-objective — parte un objetivo alto en varias historias de usuario
