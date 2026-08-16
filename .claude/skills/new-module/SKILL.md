@@ -1,0 +1,203 @@
+---
+name: new-module
+description: Installs an external module (a Claude Code project — an agent, optionally with skills — that plugs into an orchestration as a story gate or a standalone generator). Clones the repo, validates its manifest, runs a best-effort risk scan (tools, network patterns, vulnerable dependencies), shows the user a preview, and only registers it in modules/registry.md once accepted.
+---
+
+Install a module into `modules/installed/<name>/` — external code Legion does not own. Your job
+is **validation before trust**, never a rubber stamp: `Tools:`/`Writes to:` declared in a
+manifest are worthless if nobody checks them before the module ever runs. See
+`modules/README.md` for the full folder layout and manifest format this skill implements
+against.
+
+**Arguments**: `/new-module <repo-or-path>` (a git URL or a local path to clone/link from).
+
+## Step 1 — Clone
+
+Clone (or link, if it's a local path) the external repo into `modules/installed/<name>/`. Derive
+`<name>` from the repo name unless the user specifies one. If a module with that name is already
+`installed`/`deprecated` in `modules/registry.md`, stop and ask whether this is meant to update
+it instead (that's `/module activate` + the version-check flow described in `legion/SKILL.md`,
+not a second install).
+
+## Step 1bis — Autoconfig assist (only if `module.md` still has template placeholders)
+
+Legion's official template (`legion-modules/_template/module.md`) marks every field a module
+author has to decide with a literal `<...>` placeholder — the same convention
+`.orchestrator/config.md` already uses for unresolved project config. Before parsing required
+fields in Step 2, check whether `type` or any field required for it still contains a `<...>`
+placeholder. If so, this is a manifest someone copied from the template and hasn't finished
+filling in — a real, expected case, not a broken module. Don't reject it; run an interactive
+assist instead:
+
+1. If `type` itself is still unresolved (`<gate|generator>`), ask first with `AskUserQuestion` —
+   nothing else in this step can proceed without it.
+2. If `agent_entrypoint` already resolves to a real file, read it: its frontmatter `tools:` can
+   pre-fill the manifest's `tools:` list directly (same values, just reformatted from
+   comma-separated to a YAML list) — offer it as a pre-filled default, never apply it silently
+   without the user seeing what was inferred.
+3. Ask whatever required fields are still `<...>` via `AskUserQuestion`, batched up to 4 per
+   question call (same pacing as the design-reviewer loop), with a sensible default pre-selected
+   wherever the field format in `modules/README.md` documents one (`default_activation: opt-in`,
+   `blocking: true`, `requires_local_config: false`, `max_concurrent`'s derived-default rule) —
+   free text is only needed for values nothing can guess (`valid_stages`, `default_stage`,
+   `writes_to`, `output`).
+4. Write the resolved values back into `modules/installed/<name>/module.md` — this is Legion
+   writing into its own freshly cloned copy from Step 1, not into the module author's source
+   repo, so it's the same class of write Step 1's clone already performs.
+5. Continue to Step 2 against the now-resolved manifest. A field the user skips answering stays
+   as a real gap — Step 2's required-field check still applies to it exactly as it would to any
+   other incomplete `module.md`. Autoconfig fills placeholders, it never exempts anything from
+   the contract.
+6. Record in the preview built at Step 5 that this manifest was completed via autoconfig, so the
+   user approving the install knows part of what they're reviewing wasn't authored as-is by the
+   module.
+
+A field the author already replaced with a real, non-placeholder value is never touched or
+second-guessed by this step — autoconfig only ever fills in what's still literally `<...>`.
+
+## Step 2 — Parse `module.md` and check required fields
+
+Read `modules/installed/<name>/module.md` (after Step 1bis has resolved whatever template
+placeholders it could). Required fields depend on the declared `type` — validating against a
+single fixed list would reject valid manifests of the other type:
+
+- **Always**: `type`, `tools`, `agent_entrypoint`.
+- **`type: gate`**, additionally: `valid_stages`, `default_stage`, `default_activation`,
+  `writes_to` (the key must exist even if empty), `blocking`.
+- **`type: generator`**, additionally: `output`, `scope`.
+- **`type: implementer`**: not supported by this skill yet — stop and tell the user this type
+  has no implemented contract (see the analysis' section 2), only `gate`/`generator` can be
+  installed today.
+
+If a required field for the declared `type` is missing or still an unresolved `<...>`
+placeholder that Step 1bis didn't get an answer for, **reject outright** — this is not a risk
+decision, it's an incomplete manifest that can't be evaluated. Do not proceed to Step 3.
+
+## Step 3 — Consistency checks
+
+- **`tools` classification**: compare each declared tool against the known set already used by
+  `.orchestrator/capabilities.md` (`Read, Grep, Glob, Bash, Write, Edit`). Anything outside that
+  set (`WebFetch`, `WebSearch`, third-party MCP tools) is flagged as a **risk**, not
+  auto-rejected.
+- **`writes_to`/`tools` consistency** (`type: gate`): if `writes_to` is non-empty, `Write` or
+  `Edit` must be in `tools`; if empty, they shouldn't be. **`type: generator`**: same check
+  against `output` instead (always declared for this type) — if it's declared, `Write` or `Edit`
+  must be in `tools`.
+- **Cross-check against the real agent**: open the file at `agent_entrypoint`, compare its own
+  frontmatter `tools:` against the manifest's `tools:`. Any tool the agent actually uses that the
+  manifest didn't declare is a risk item (stale or misleading manifest).
+- **`writes_to` collision** (`type: gate` only): compare against the `writes_to` of every other
+  `installed`/`deprecated` module in `modules/registry.md`. Overlap is flagged, not blocked —
+  could be intentional.
+
+## Step 4 — Best-effort security scan (informative, never blocking on its own)
+
+Neither of these two checks is a technical barrier — they're grep-based/best-effort, and their
+purpose is to put real information in front of the user, not to gatekeep automatically. Not even
+a `Critical` finding forces a discard by itself.
+
+- **Network patterns**: grep the cloned code for common HTTP client imports/calls (`fetch`,
+  `axios`, `requests`, `http.client`, `urllib`, `Net::HTTP`, `net/http`, `curl`/`wget`
+  invocations in scripts, low-level sockets), hardcoded URLs/IPs, and env var names suggestive
+  of an exfiltration target (`WEBHOOK_URL`, `COLLECT_ENDPOINT`). This is pattern matching, not
+  data-flow analysis or execution — expect false positives (legitimate telemetry) and false
+  negatives (obfuscated code). If `tools` includes `Bash`, add an explicit note regardless of
+  scan results: the module can read anything the process can reach, not just what `writes_to`
+  declares — this is a disclosed, accepted risk, not something this scan or any other mechanism
+  in this system can technically prevent.
+- **Vulnerable dependencies**: detect a recognizable manifest (`package.json`+lock,
+  `requirements.txt`/`pyproject.toml`, `pom.xml`/`build.gradle`, `go.mod`, `Gemfile`,
+  `Cargo.toml` — a polyglot module may have more than one) and run the matching ecosystem audit
+  tool if available (`npm audit`, `pip-audit`, `govulncheck`, `bundle-audit`, `cargo-audit`, the
+  Maven/Gradle equivalent). If no manifest is found, say so ("no dependency manifest found —
+  check not applicable"). If a manifest is found but the tool isn't available in this
+  environment, say so explicitly ("`pip-audit` not available — check skipped, could not
+  validate") — never omit the check silently.
+
+## Step 5 — Build the preview
+
+Write `modules/pending/<name>.md`:
+
+```md
+---
+module: <name>
+status: PENDING APPROVAL
+type: <gate|generator>
+source: <repo-or-path>
+scanned_at: <ISO timestamp>
+autoconfigured: <true|false>              # true only if Step 1bis resolved at least one placeholder
+---
+
+# Risk preview: <name>
+
+## Declared manifest
+(the full `module.md` frontmatter block, verbatim — if `autoconfigured: true`, add a short note
+above the block listing which fields were filled in by the assist rather than authored as-is by
+the module's source)
+
+## Tools: classification
+| Tool | Status | Note |
+|---|---|---|
+| ... | Known / ⚠ unknown | ... |
+
+## Cross-check: manifest vs. Agent entrypoint
+| Tool | Declared in module.md | Used by the agent | Discrepancy |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+## Network scan (best-effort)
+| Pattern | File | Line | Note |
+|---|---|---|---|
+(or: "No known network patterns matched — this doesn't guarantee no network access, it's pattern matching, not data-flow analysis")
+
+## Vulnerable dependency scan
+Tool used: <tool> (manifest detected: <file>)
+| Package | Severity | Advisory |
+|---|---|---|
+(or the "not found"/"tool unavailable" note from Step 4)
+
+## Agent entrypoint (full content)
+(the complete file — same rule as reading a file in full before distributing it)
+
+## Decision
+Pending.
+```
+
+Sections that don't apply to the declared `type` (e.g. the `writes_to` row for a `generator`)
+are simply omitted, not left empty.
+
+## Step 6 — Decision
+
+**Point the user at the file before asking, not just a chat summary**: an `AskUserQuestion` option's description is a one-liner — it cannot carry the full network-scan table, the complete dependency list, or the agent's entire content. Before calling `AskUserQuestion`, tell the user in chat that the full preview is at `modules/pending/<name>.md` and that it's worth opening before deciding — same pattern `/new-story` already uses for its own file preview (do not assume a short chat recap is equivalent to having read it). A condensed version of the highest-severity findings can still go in the question text itself (that's a helpful summary, not a substitute for the file), but the file reference always comes first.
+
+Then ask with `AskUserQuestion`:
+- **Register as-is**
+- **Register trimming `Tools:`** to only what's classified as known-safe — if the tool being
+  trimmed appears as used by the agent in Step 3's cross-check, warn explicitly first that
+  trimming it will likely break the module, not just make it safer; don't offer it as a free
+  action.
+- **Discard**
+
+Delete `modules/pending/<name>.md` in every case. If registered, write the row to
+`modules/registry.md` with state `installed`. If `requires_local_config: true` and
+`modules/installed/<name>/.env.<base-repo>.local` doesn't exist, tell the user it's needed before
+the module's first real run — check existence only, never read its content.
+
+Clamp `max_rejection_rounds` (if declared, `type: gate` only) to `config.md`'s
+`max_correction_rounds` — if it's higher, lower it with a note explaining why.
+
+## Step 7 — Signal capture (optional, skippable)
+
+After the decision, one more short `AskUserQuestion` (multiSelect, skippable): *"What helped you
+decide?"* — options: manifest/tools classification, network scan, dependency scan, full agent
+content, something else. Append the answer (or "skipped") as a new row to the tracking table in
+`mejoras-pendientes-modules.md` (item 1) at the repo root, if that file exists — this is
+lightweight signal capture for tuning the preview format later, not a blocking step; if the file
+doesn't exist, skip this silently.
+
+## Rules
+
+- Never read the content of a `.env.*.local` file — existence only.
+- Never widen `tools` beyond what Step 6 ends up registering — the orchestrator does not extend
+  a module's permissions at launch time later.
+- Never install `type: implementer` — no contract defined yet.

@@ -29,6 +29,13 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
 │   ├── <base-repo>/                 # ONLY real clone of the destination project. NEVER worked on directly here
 │   └── worktrees/
 │       └── <Story-ID>/                 # One worktree per story, with its own working branch
+├── modules/                          # External modules (gate/generator) — see modules/README.md, self-contained subsystem
+│   ├── README.md
+│   ├── registry.md                   # Installed modules + state (installed/deprecated/uninstalled)
+│   ├── pending/<module-name>.md       # Transient risk previews from /new-module
+│   ├── installed/<module-name>/       # External clones (their own git) — NEVER edited by hand, gitignored
+│   ├── reports/<module-name>/         # Results per run (Story-ID-Rn.md for gate, timestamp.md for generator)
+│   └── output/<module-name>/<base-repo-name>/  # Artifacts from type: generator modules, gitignored (regenerable)
 ├── .claude/
 │   ├── agents/
 │   │   ├── worktree-agent.md               # Generalist implementer (default)
@@ -46,6 +53,9 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
 │       ├── new-story/SKILL.md          # /new-story command
 │       ├── new-lesson/SKILL.md         # /new-lesson command
 │       ├── investigate/SKILL.md        # /investigate command (standalone spike mode)
+│       ├── new-module/SKILL.md         # /new-module command (installs an external module, with risk preview)
+│       ├── module/SKILL.md             # /module uninstall|activate command (module lifecycle)
+│       ├── run-module/SKILL.md         # /run-module command (invokes a type: generator module on demand)
 │       ├── patterns-and-smells/SKILL.md  # Guide to patterns and code smells for the destination project (mandatory)
 │       ├── security-guide/SKILL.md     # OWASP checklist for worktree-agent-security
 │       └── data-guide/SKILL.md         # Migration/modeling checklist for worktree-agent-data
@@ -187,6 +197,11 @@ These two mechanisms **do not take authority away from the orchestrator**: it is
 - **Never** remove a worktree with uncommitted changes (except for a discard confirmed by the user).
 - An agent **never** works outside its worktree nor communicates directly with another (never `SendMessage` between agents); every coordination decision goes through the orchestrator. **Sole exception**: an agent may write a Signal or an Announcement in `.orchestrator/` — that is depositing information into the shared environment, not direct communication between worktrees, and it never replaces or bypasses the orchestrator's approval for anything.
 - Every architectural decision is recorded in `.orchestrator/decisions/DEC-NNN.md` with: context, alternatives compared, criteria evaluated, decision, and orders issued.
+- **Modules** (external code installed under `modules/`, see `modules/README.md`) are subject to the same isolation rules as any agent, with the trust boundary made explicit rather than assumed:
+  - A `type: gate` module launched by the orchestrator only writes inside the worktree of the story that triggered it (or the zone declared in its `writes_to`, if it's a subpath of that worktree) — validated before launch and checked again after, never just declared. A `type: generator` module with `scope: base-repo` gets the equivalent check against `workspace/<base-repo>` itself (`git status --porcelain` before/after launch), since that's the single clone every worktree is born from — any unexplained change there is treated as an incident, same severity as a worktree isolation violation.
+  - The orchestrator **never** widens a module's tools beyond what was validated in its `module.md` at install time (`/new-module`) — if `tools` includes `Bash`, the module can still read anything the process can reach regardless of `writes_to`/`output`; this is a disclosed, accepted risk (there is no sandboxing in this system), not something any check here technically prevents.
+  - A module never communicates with another worktree, another module, or writes directly to `.orchestrator/signals/`/`.orchestrator/announcements/` — it reports findings in `modules/reports/`, and the orchestrator decides whether one warrants escalating to a Signal or Announcement itself. When it does, the resulting file carries an `Origin: module:<name> (modules/reports/<module>/<Story-ID>-Rn.md)` field, so it's never indistinguishable from one a native agent raised.
+  - A `type: gate` module can advance a rejection earlier in the cycle; it never replaces `worktree-reviewer` as the sole gate to `finalized` — not configurable by `blocking: true` or any other manifest option.
 
 ---
 

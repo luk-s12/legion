@@ -3,6 +3,7 @@ base_repo: workspace/<name>                    # Directory inside workspace/ tha
 base_branch: <the project's real branch name, whatever it is — main, master, develop, trunk, development, release/*, etc.>  # Branch from which each worktree is created. Do not assume it's one from a fixed set: ask/confirm the one the project actually uses
 branch_prefix: <prefix>/<Story-ID>              # Team's branch convention (e.g. username, area, feature/). Born together with the worktree
 max_parallel: <number, default 3>               # Maximum number of active worktrees/agents at once. The real bottleneck is usually the CPU/RAM of the builds, not the worktrees themselves. Configurable by the user when invoking /legion MAX_PARALLEL=<n>
+max_correction_rounds: <number, default 3>      # Shared budget of correction rounds per story before escalating to the user — counts BOTH worktree-reviewer rejections and module `gate` rejections (modules/, see modules/README.md) against the same counter, not two independent caps. A module's own `max_rejection_rounds` in its module.md is clamped to this value, never looser
 local_files_to_copy:                            # Gitignored files/folders in the base repo that a new worktree does NOT bring (because `git worktree add` only copies what's tracked/committed) but that the agent needs to work (architecture rules, docs). The orchestrator copies them when provisioning each worktree
   - <e.g. .claude/>
   - <e.g. docs/>
@@ -37,6 +38,7 @@ there is no limit on the number of stories, only a **concurrency** limit (`MAX_P
 
 ## Field notes
 
+- **`max_correction_rounds`**: shared budget across `worktree-reviewer` and any `type: gate` module active on a story (see `modules/README.md`). Any rejection — from the reviewer or from a module — increments the same per-story counter; exceeding it escalates to the user with the last report, whoever produced it. This prevents a story from silently absorbing up to (module rounds + reviewer rounds) corrections before anyone notices. Resets when a story enters Phase 6 (post-closure correction), which tracks its own rounds separately.
 - **`content_language`**: language used for **free-form prose only** in what the agents persist into the destination project — a story's description and bullet content, generated docs body text. Independent of whatever language you chat with the agent in (that always follows you automatically, no config needed). Change this value to any other language if you want that prose written in it instead — e.g. `Spanish`, `Portuguese`. **The value itself is always written in English** (the language's English name — `Spanish`, not `español`), the same fixed-vocabulary convention as commands and section headers; only the prose it controls gets written in the chosen language. **Never** applies to structural tokens the system parses literally — block headers (`# Story <ID>`), section headers (`## Acceptance criteria`, `## Depends on`, `## Subtasks`, etc.), event names, statuses, or any command/file/folder name. Those always stay in English, exactly like commands do. Applies to prose and comments ONLY — NEVER to code identifiers (class/method/variable/test names), which always follow the convention observed in the destination repo (e.g. English, if the existing code and tests name things in English).
 
 ## How it's resolved the first time
@@ -56,6 +58,7 @@ base_repo: workspace/base-repo
 base_branch: main
 branch_prefix: team-ai/ci/<Story-ID>
 max_parallel: 3
+max_correction_rounds: 3
 local_files_to_copy:
   - .claude/
   - docs/

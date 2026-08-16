@@ -16,9 +16,11 @@ It is permanent memory (never resets between runs), same criterion as `component
 
 ## Registry
 
-| Agent | Domain | Story (last 20) | Approved on 1st round | Post-closure findings | Post-closure corrections (Phase 6) |
-|---|---|---|---|---|---|
-| *(no data yet)* | | | | | |
+| Agent | Domain | Story (last 20) | Approved on 1st round | Module gate rounds | Reviewer rounds | Post-closure findings | Post-closure corrections (Phase 6) |
+|---|---|---|---|---|---|---|---|
+| *(no data yet)* | | | | | | | |
+
+`Module gate rounds`/`Reviewer rounds` (see `modules/README.md`) are separate columns on purpose — a story only counts as "approved on 1st round" if `Module gate rounds` is 0 **and** the reviewer's own first report already said `APPROVED`. A story that needed 2 module rounds before the reviewer ever saw it isn't "clean" just because the reviewer's R1 was clean. `type: generator` modules never get a row here — there's no approval verdict to measure on something that never rejects anything (see `metrics.md`'s "Standalone module runs" instead).
 
 ## Post-closure findings detail
 
