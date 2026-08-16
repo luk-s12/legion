@@ -21,7 +21,7 @@ Un **Agente Orquestador** (la sesión de Claude Code en esta carpeta raíz) coor
 
 - [Requisitos previos](#requisitos-previos)
 - [1. Escribir las historias de usuario](#1-escribir-las-historias-de-usuario)
-- [2. Comandos disponibles](#2-comandos-disponibles)
+- [2. Lanzar la implementación](#2-lanzar-la-implementación)
 - [3. Seguir el progreso](#3-seguir-el-progreso)
 - [4. Si se corta la sesión](#4-si-se-corta-la-sesión)
 - [5. Al terminar — cosecha](#5-al-terminar--cosecha)
@@ -31,10 +31,10 @@ Un **Agente Orquestador** (la sesión de Claude Code en esta carpeta raíz) coor
 
 ## Requisitos previos
 
-1. **Un único repo base**: cloná el proyecto destino **dentro de [workspace/](workspace/)** (un solo clone, no N). El sistema lo detecta solo: es el único subdirectorio de `workspace/` con `.git` (aparte de `worktrees/`, que crea el propio sistema).
-2. **Baseline commiteado (idealmente)**: los worktrees nacen del COMMIT de la rama base, no de tu working tree — **no hace falta que hagas checkout manual a esa rama antes de orquestar**. Si el repo base está parado en cualquier rama que no sea la base, no hay nada que preparar. Si en cambio está parado en la rama base y tiene cambios sin commitear, `/legion` no aborta directo: te pregunta si continuar igual (ese cambio queda afuera de todos los worktrees — útil para un archivo que a propósito nunca se commitea, ej. un `.properties` local), descartarlo, o abortar la ejecución. `/legion` también actualiza la rama base contra el remoto (`fetch`) antes de arrancar, y te avisa si está desactualizada.
-3. **Historias de usuario escritas** en `requirements-to-work.md` — **todas las que quieras, sin límite**.
-4. **Configuración del proyecto** en `.orchestrator/config.md`: si es la primera vez que corrés el sistema sobre este repo, `/legion` investiga el código y te pregunta lo que falte (rama base, prefijo de rama, `MAX_PARALLEL`, comandos de verificación, herramienta de migraciones, archivos locales que copiar a cada worktree, etc.) y lo deja guardado para las próximas ejecuciones.
+- **Un único repo base**: cloná el proyecto destino **dentro de [workspace/](workspace/)** (un solo clone, no N). El sistema lo detecta solo: es el único subdirectorio de `workspace/` con `.git` (aparte de `worktrees/`, que crea el propio sistema).
+- **Baseline commiteado (idealmente)**: los worktrees nacen del COMMIT de la rama base, no de tu working tree — **no hace falta que hagas checkout manual a esa rama antes de orquestar**. Si el repo base está parado en cualquier rama que no sea la base, no hay nada que preparar. Si en cambio está parado en la rama base y tiene cambios sin commitear, `/legion` no aborta directo: te pregunta si continuar igual (ese cambio queda afuera de todos los worktrees — útil para un archivo que a propósito nunca se commitea, ej. un `.properties` local), descartarlo, o abortar la ejecución. `/legion` también actualiza la rama base contra el remoto (`fetch`) antes de arrancar, y te avisa si está desactualizada.
+- **Historias de usuario escritas** en `requirements-to-work.md` — **todas las que quieras, sin límite**. Ver [1. Escribir las historias de usuario](#1-escribir-las-historias-de-usuario) más abajo si todavía no las tenés.
+- **Configuración del proyecto** en `.orchestrator/config.md`: si es la primera vez que corrés el sistema sobre este repo, `/legion` investiga el código y te pregunta lo que falte (rama base, prefijo de rama, `MAX_PARALLEL`, comandos de verificación, herramienta de migraciones, archivos locales que copiar a cada worktree, etc.) y lo deja guardado para las próximas ejecuciones.
 
 ## 1. Escribir las historias de usuario
 
@@ -105,7 +105,19 @@ PROJ-099   # no se lanza hasta que PROJ-099 esté finalizado — dependencia de 
 
 **Sin límite de cantidad.** Si dos historias de usuario se pisan en código, el sistema las serializa automáticamente en tandas distintas — no hace falta que lo coordines vos. `## Depends on` es distinto: una dependencia de negocio explícita, no de solapamiento. `## Subtasks` es para el caso puntual en que una historia de usuario mezcla dominios que necesitan un gate de aprobación propio (ej. una revisión de seguridad que puede rechazarla por su cuenta) — se ejecutan en secuencia, sobre el mismo worktree.
 
-## 2. Comandos disponibles
+## 2. Lanzar la implementación
+
+Con las historias de usuario ya escritas — a mano o generadas por `/new-story`/`/new-objective` — el siguiente paso es correr `/legion` (o `/legion dry-run` si preferís revisar los diseños antes de que se escriba código).
+
+Recomendación: **dry-run para historias de usuario grandes, ambiguas o que puedan solaparse** — revisar varios diseños en papel cuesta minutos; re-implementar cuesta horas.
+
+<p align="center">
+  <img src="assets/demo/es/design-pending-approval.gif" alt="Diseño pendiente de aprobación" width="800">
+  <br>
+  <sub>Un diseño persistido en el gate de dry-run (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), estado <code>PENDING APPROVAL</code></sub>
+</p>
+
+### Comandos disponibles
 
 Todos se corren en la sesión de Claude Code de esta carpeta raíz:
 
@@ -116,14 +128,6 @@ Todos se corren en la sesión de Claude Code de esta carpeta raíz:
 | `/legion` | Ejecución completa: tandas, worktrees, diseño, implementación, revisión, hasta vaciar la cola | Opcionales y combinables: `dry-run` (frena en el gate de la primera tanda: deja los planes como archivos revisables en `.orchestrator/designs/` y espera tu veredicto por historia — aprobar / ajustar / descartar — antes de implementar) y `MAX_PARALLEL=<n>` (techo de agentes implementando a la vez; si hay menos historias disponibles que `<n>`, corren menos, nunca se fuerza el número; si no lo pasás, usa el valor guardado en `config.md`, default 3) |
 | `/investigate` | Lanza el agente de investigación (modo spike) sobre una pregunta técnica puntual, sin worktree ni implementación — publica el hallazgo como Announcement | Opcional: la pregunta/tema en texto libre — si no lo pasás, te lo pregunta |
 | `/new-lesson` | Registra un incidente real (regla de negocio no contemplada) en `.orchestrator/lessons-learned.md`, para que futuras historias de usuario sobre la misma zona lo encuentren antes de repetirlo | Opcional: los datos del incidente en texto libre — si no lo pasás, te los pregunta |
-
-Recomendación: **dry-run para historias de usuario grandes, ambiguas o que puedan solaparse** — revisar varios diseños en papel cuesta minutos; re-implementar cuesta horas.
-
-<p align="center">
-  <img src="assets/demo/es/design-pending-approval.gif" alt="Diseño pendiente de aprobación" width="800">
-  <br>
-  <sub>Un diseño persistido en el gate de dry-run (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), estado <code>PENDING APPROVAL</code></sub>
-</p>
 
 ### Qué pasa por dentro (resumen)
 
