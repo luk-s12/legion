@@ -13,8 +13,8 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
   | Story | Worktree | Branch | Batch | Status | Last activity | Review round |
   ```
 
-  Statuses: `queued` / designing / designed (dry-run) / approved / in progress / in review / fixing /
-  migrating / finalized / aborted.
+  Statuses: `queued` / designing / designed (dry-run) / design review (dry-run, D<n>) / approved /
+  in progress / in review / fixing / migrating / finalized / aborted.
   Below the table: the pre-analysis's **overlap matrix** (story × impact zone:
   modules/services, entities/tables, endpoints, migrations), the **batch plan** (conflict
   graph + directed edges from `## Depends on` and grouping up to `MAX_PARALLEL`), the current
@@ -36,11 +36,25 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
   `APPROVED` / `APPROVED WITH ADJUSTMENTS` / `DISCARDED`. It's the dry-run review material
   (the user can annotate it directly), the reference the adversarial reviewer receives, the source
   of the design during a resumption, and the **architectural memory** consulted by subsequent batches.
-  Kept as history across runs.
-- `reviews/<Story-ID>-R<n>.md` — adversarial reviewer (`worktree-reviewer`) report per round:
-  APPROVED/REJECTED verdict, re-run mechanical verification (lint/format, diff
+  Kept as history across runs. Once the user approves it in dry-run, it also gains a `## Design
+  review` section (one subsection per round `D<n>`), appended by the Orchestrator as the design
+  review loop (below) runs: a findings table (`INCORPORATED` / `OMITTED (user)` / `DISMISSED
+  (triage)`) plus, for findings with a code fragment, the before/after snippets. For a story with
+  `## Subtasks`, this section nests as `### Design review` inside the relevant `## Subtask N`
+  instead of being document-level — the loop runs once per subtask, at the moment that subtask's
+  own design is approved, not once for the whole story.
+- `reviews/<Story-ID>-code-review-R<n>.md` — adversarial reviewer (`worktree-reviewer`) report per
+  round: APPROVED/REJECTED verdict, re-run mechanical verification (lint/format, diff
   tests), manual architecture audit, and findings with severity (BLOCKING/MAJOR/MINOR). Written by
   the reviewer; the orchestrator triages the findings and orders the corrections.
+- `reviews/<Story-ID>-design-review-D<n>.md` — **design** reviewer (`design-reviewer`) report per
+  round, dry-run only. Runs after the user approves a design and before that approval reaches the
+  implementer — everything is still on paper, no code exists yet. No verdict (no APPROVED/REJECTED): just
+  findings with severity (DR-HIGH/DR-MED/DR-LOW) and a suggested amendment each. The user decides
+  which to incorporate (`AskUserQuestion`, batches of up to 4); incorporated ones get applied
+  directly to `designs/<Story-ID>.md`'s `## Design review` section, omitted ones are carried into
+  `worktree-reviewer`'s "Assumed residual risks" later on. The `D<n>` counter is independent from
+  the code-review `R<n>` counter.
 - `decisions/DEC-NNN.md` — the Orchestrator's architectural decisions when two stories
   solve the same problem in different ways (from the same batch or different batches). Structure:
   context, alternatives compared, criteria (reuse, maintainability, simplicity, alignment with the
@@ -119,6 +133,8 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
   ```
 
   Recalculated at the Closure of each orchestration run, from the timestamps already present in `events/<Story-ID>.md`, from `subagent_tokens`/`tool_uses`/`duration_ms` the `Agent` tool returns when each subagent completes, and from the `model` the Orchestrator itself passed on that `Agent` call (or "inherited" if it omitted the override) — no new instrumentation required. Permanent memory, never resets.
+
+  **`Review rounds`** counts only `reviews/<Story-ID>-code-review-R*.md` (code review, post-`FINALIZED`) — `reviews/<Story-ID>-design-review-D*.md` (dry-run design review, no verdict) is never mixed into this column; iterating a design several rounds is expected and healthy, not a review "round" in the same sense. `Time at gate`, in dry-run runs, includes the time spent in the design review loop before the approval was sent.
 
 ## Worktree infrastructure (doesn't live in `.orchestrator/`, but the board references it)
 
