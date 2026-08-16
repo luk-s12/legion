@@ -55,7 +55,7 @@ Explicitly flag **possible bugs**: if the description, applied as-is on top of t
 
 ## Step 4 — Draft, preview, and confirm
 
-Write the story's persisted **prose** (the description paragraph and the bullet content under each section) in whatever `.orchestrator/config.md`'s "Content language" field says (default English) — regardless of what language you and the user chatted in to get here. The section headers themselves (`# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Subtasks`) always stay in English exactly as shown below — the orchestrator parses those literally (e.g. to build the dependency graph from `## Depends on`), so translating them would silently break scheduling.
+Write the story's persisted **prose** (the description paragraph and the bullet content under each section) in whatever `.orchestrator/config.md`'s `content_language` field says (default English) — regardless of what language you and the user chatted in to get here. The section headers themselves (`# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Subtasks`) always stay in English exactly as shown below — the orchestrator parses those literally (e.g. to build the dependency graph from `## Depends on`), so translating them would silently break scheduling.
 
 Build the story's final block:
 

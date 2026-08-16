@@ -15,7 +15,7 @@ Un **Agente Orquestador** (la sesión de Claude Code en esta carpeta raíz) coor
 > **Nota sobre el idioma de uso**:
 > - **Comandos, nombres de archivo/carpeta, tokens de eventos**: siempre en inglés (`/legion`, `worktree-agent`, `FINALIZED`...) — nunca cambia.
 > - **Conversación con el agente** (preguntas, explicaciones): sigue el idioma en el que vos le escribas, automáticamente — no hay nada que configurar.
-> - **Contenido que el agente *persiste*** (la descripción de una historia, la documentación generada): sigue el campo **"Content language"** de `.orchestrator/config.md` — por default es inglés, pero podés cambiarlo a cualquier otro idioma. Independiente del idioma en el que hayas charlado con el agente.
+> - **Contenido que el agente *persiste*** (la descripción de una historia, la documentación generada): sigue el campo **`content_language`** de `.orchestrator/config.md` — por default es inglés, pero podés cambiarlo a cualquier otro idioma. Independiente del idioma en el que hayas charlado con el agente.
 
 ## Índice
 

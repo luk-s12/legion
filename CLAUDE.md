@@ -73,7 +73,7 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
   ```bash
   git -C workspace/<base-repo> worktree add ../worktrees/<Story-ID> -b <branch-prefix>/<Story-ID> <base-branch>
   ```
-  After the `add`, **copy the gitignored local files** that a new worktree does not bring along (`git worktree add` only copies what is tracked/committed) but that the agent needs: the exact list lives in `.orchestrator/config.md` ("Local files to copy to the worktree" — typically local architecture rules/docs). Without this, the agent works without the project's rules.
+  After the `add`, **copy the gitignored local files** that a new worktree does not bring along (`git worktree add` only copies what is tracked/committed) but that the agent needs: the exact list lives in `.orchestrator/config.md` (`local_files_to_copy` in the frontmatter — typically local architecture rules/docs). Without this, the agent works without the project's rules.
 - **Remove** (only when discarding a dry-run, or after a harvest confirmed by the user):
   ```bash
   git -C workspace/<base-repo> worktree remove ../worktrees/<Story-ID>   # refuses if there are uncommitted changes ✔
