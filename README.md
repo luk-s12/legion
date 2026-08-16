@@ -21,7 +21,7 @@ An **Orchestrator Agent** (the Claude Code session in this root folder) coordina
 
 - [Prerequisites](#prerequisites)
 - [1. Writing the stories](#1-writing-the-stories)
-- [2. Available commands](#2-available-commands)
+- [2. Run the implementation](#2-run-the-implementation)
 - [3. Following progress](#3-following-progress)
 - [4. If the session gets cut off](#4-if-the-session-gets-cut-off)
 - [5. When finished — harvest](#5-when-finished--harvest)
@@ -31,10 +31,10 @@ An **Orchestrator Agent** (the Claude Code session in this root folder) coordina
 
 ## Prerequisites
 
-1. **A single base repo**: clone the destination project **inside [workspace/](workspace/)** (a single clone, not N). The system detects it on its own: it's the only subdirectory of `workspace/` with `.git` (aside from `worktrees/`, which the system itself creates).
-2. **Committed baseline (ideally)**: worktrees are born from the base branch's COMMIT, not from your working tree — **you don't need to manually check out that branch before orchestrating**. If the base repo is sitting on any branch other than the base one, there's nothing to prepare. If it **is** sitting on the base branch and has uncommitted changes, `/legion` doesn't abort outright: it asks whether to continue anyway (that change stays out of all worktrees — useful for a file that is deliberately never committed, e.g. a local `.properties` file), discard it, or abort the run. `/legion` also updates the base branch against the remote (`fetch`) before starting, and warns you if it's out of date.
-3. **Stories written** in `requirements-to-work.md` — **as many as you want, no limit**.
-4. **Project configuration** in `.orchestrator/config.md`: if this is the first time you run the system on this repo, `/legion` investigates the code and asks you whatever is missing (base branch, branch prefix, `MAX_PARALLEL`, verification commands, migration tooling, local files to copy to each worktree, etc.) and saves it for future runs.
+- **A single base repo**: clone the destination project **inside [workspace/](workspace/)** (a single clone, not N). The system detects it on its own: it's the only subdirectory of `workspace/` with `.git` (aside from `worktrees/`, which the system itself creates).
+- **Committed baseline (ideally)**: worktrees are born from the base branch's COMMIT, not from your working tree — **you don't need to manually check out that branch before orchestrating**. If the base repo is sitting on any branch other than the base one, there's nothing to prepare. If it **is** sitting on the base branch and has uncommitted changes, `/legion` doesn't abort outright: it asks whether to continue anyway (that change stays out of all worktrees — useful for a file that is deliberately never committed, e.g. a local `.properties` file), discard it, or abort the run. `/legion` also updates the base branch against the remote (`fetch`) before starting, and warns you if it's out of date.
+- **Stories written** in `requirements-to-work.md` — **as many as you want, no limit**. See [1. Writing the stories](#1-writing-the-stories) below if you don't have any yet.
+- **Project configuration** in `.orchestrator/config.md`: if this is the first time you run the system on this repo, `/legion` investigates the code and asks you whatever is missing (base branch, branch prefix, `MAX_PARALLEL`, verification commands, migration tooling, local files to copy to each worktree, etc.) and saves it for future runs.
 
 ## 1. Writing the stories
 
@@ -53,9 +53,35 @@ The skill guides you through creating each story **validated against the real co
 
 Stories produced by `/new-story` arrive better specified at the design gate: fewer questions from agents, fewer correction rounds.
 
+Run it with no arguments at all and it walks you through it interactively instead of demanding a specific syntax:
+
+<p align="center">
+  <img src="assets/demo/en/new-story-no-args.gif" alt="/new-story with no arguments" width="800">
+  <br>
+  <sub><code>/new-story</code> invoked bare: it asks for the Story ID first (with a suggested default), then the description</sub>
+</p>
+
+You can also pass the ID and description straight as arguments (`/new-story PROJ-100: <description>`) — here's what a full end-to-end run looks like:
+
+<p align="center">
+  <img src="assets/demo/en/new-story-full-run.gif" alt="/new-story real run" width="800">
+  <br>
+  <sub><code>/new-story</code> analyzing a real request against a toy repo, asking about edge cases, and drafting the story</sub>
+</p>
+
+<p align="center">
+  <img src="assets/demo/en/new-story-result.gif" alt="Resulting story" width="800">
+  <br>
+  <sub>...and what it looks like once applied to <code>requirements-to-work.md</code></sub>
+</p>
+
 ### Manual option
 
 Edit [requirements-to-work.md](requirements-to-work.md). Mandatory format — blocks separated by `---`, header `# Story <ID>`:
+
+<p align="center">
+  <img src="assets/demo/en/story-file-format.gif" alt="Story format" width="800">
+</p>
 
 ```md
 # Story PROJ-100
@@ -79,21 +105,29 @@ PROJ-099   # not launched until PROJ-099 is finalized — business dependency, n
 
 **No limit on quantity.** If two stories step on each other in code, the system automatically serializes them into different batches — you don't need to coordinate it yourself. `## Depends on` is different: an explicit business dependency, not an overlap. `## Subtasks` is for the specific case where a story mixes domains that need their own approval gate (e.g. a security review that can reject the story on its own) — they run in sequence, on the same worktree.
 
-## 2. Available commands
+## 2. Run the implementation
+
+With your stories written — by hand or generated by `/new-story`/`/new-objective` — the next step is running `/legion` (or `/legion dry-run` if you'd rather review the designs before any code gets written).
+
+Recommendation: **dry-run for large, ambiguous stories, or ones that could overlap** — reviewing several designs on paper costs minutes; re-implementing costs hours.
+
+<p align="center">
+  <img src="assets/demo/en/design-pending-approval.gif" alt="Design pending approval" width="800">
+  <br>
+  <sub>A design persisted at the dry-run gate (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), status <code>PENDING APPROVAL</code></sub>
+</p>
+
+### Available commands
 
 All of them are run in the Claude Code session in this root folder:
 
-| Command | What it does |
-|---------|----------|
-| `/new-objective` | Splits a high-level objective (no stories yet) into several concrete stories, confirmed one by one |
-| `/new-story` | Assistant for creating a story: analyzes your description against the code and asks whatever doesn't add up before writing it |
-| `/legion` | Full run: batches, worktrees, design, implementation, review, until the queue is empty |
-| `/legion dry-run` | Runs through the first batch's gate and **stops**: leaves the plans as reviewable files in `.orchestrator/designs/` and waits for your verdict per story (approve / adjust / discard) before implementing |
-| `/legion MAX_PARALLEL=<n>` | Adjusts the **ceiling** of agents implementing at once — if fewer stories are available than `<n>`, fewer run, the number is never forced (if you don't pass it, it uses the value saved in `config.md`, default 3) |
-| `/investigate` | Launches the research agent (spike mode) on a specific technical question, with no worktree or implementation — publishes the finding as an Announcement |
-| `/new-lesson` | Records a real incident (business rule that wasn't accounted for) in `.orchestrator/lessons-learned.md`, so future stories on the same zone find it before repeating it |
-
-Recommendation: **dry-run for large, ambiguous stories, or ones that could overlap** — reviewing several designs on paper costs minutes; re-implementing costs hours.
+| Command | What it does | Parameters |
+|---------|----------|------------|
+| `/new-objective` | Splits a high-level objective (no stories yet) into several concrete stories, confirmed one by one | Optional: the objective in free text on the same line — if you don't pass it, it asks |
+| `/new-story` | Assistant for creating a story: analyzes your description against the code and asks whatever doesn't add up before writing it | Optional: `<ID>: <description>` on the same line — if you don't pass it, it asks for the ID first and the description after, step by step |
+| `/legion` | Full run: batches, worktrees, design, implementation, review, until the queue is empty | Optional and combinable: `dry-run` (stops at the first batch's gate: leaves the plans as reviewable files in `.orchestrator/designs/` and waits for your verdict per story — approve / adjust / discard — before implementing) and `MAX_PARALLEL=<n>` (ceiling of agents implementing at once; if fewer stories are available than `<n>`, fewer run, the number is never forced; if you don't pass it, it uses the value saved in `config.md`, default 3) |
+| `/investigate` | Launches the research agent (spike mode) on a specific technical question, with no worktree or implementation — publishes the finding as an Announcement | Optional: the question/topic in free text — if you don't pass it, it asks |
+| `/new-lesson` | Records a real incident (business rule that wasn't accounted for) in `.orchestrator/lessons-learned.md`, so future stories on the same zone find it before repeating it | Optional: the incident details in free text — if you don't pass it, it asks |
 
 ### What happens under the hood (summary)
 
@@ -161,6 +195,7 @@ git status                    # review the work
 ```
 <root>/
 ├── README.md                        ← you are here
+├── README.es.md                     ← Spanish version
 ├── LICENSE.md                       # System usage license
 ├── CLAUDE.md                        # Orchestrator Agent protocol
 ├── requirements-to-work.md          # Your stories (N, no limit) or a high-level # OBJECTIVE
