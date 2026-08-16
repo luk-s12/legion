@@ -32,7 +32,7 @@ Un **Agente Orquestador** (la sesión de Claude Code en esta carpeta raíz) coor
 ## Requisitos previos
 
 1. **Un único repo base**: cloná el proyecto destino **dentro de [workspace/](workspace/)** (un solo clone, no N). El sistema lo detecta solo: es el único subdirectorio de `workspace/` con `.git` (aparte de `worktrees/`, que crea el propio sistema).
-2. **Baseline commiteado (idealmente)**: los worktrees nacen del COMMIT de la rama base, no de tu working tree — **no hace falta que hagas checkout manual a esa rama antes de orquestar**. Si el repo base está parado en cualquier rama que no sea la base, no hay nada que preparar. Si **sí** está parado en la rama base y tiene cambios sin commitear, `/legion` no aborta directo: te pregunta si continuar igual (ese cambio queda afuera de todos los worktrees — útil para un archivo que a propósito nunca se commitea, ej. un `.properties` local), descartarlo, o abortar la ejecución. `/legion` también actualiza la rama base contra el remoto (`fetch`) antes de arrancar, y te avisa si está desactualizada.
+2. **Baseline commiteado (idealmente)**: los worktrees nacen del COMMIT de la rama base, no de tu working tree — **no hace falta que hagas checkout manual a esa rama antes de orquestar**. Si el repo base está parado en cualquier rama que no sea la base, no hay nada que preparar. Si en cambio está parado en la rama base y tiene cambios sin commitear, `/legion` no aborta directo: te pregunta si continuar igual (ese cambio queda afuera de todos los worktrees — útil para un archivo que a propósito nunca se commitea, ej. un `.properties` local), descartarlo, o abortar la ejecución. `/legion` también actualiza la rama base contra el remoto (`fetch`) antes de arrancar, y te avisa si está desactualizada.
 3. **Historias de usuario escritas** en `requirements-to-work.md` — **todas las que quieras, sin límite**.
 4. **Configuración del proyecto** en `.orchestrator/config.md`: si es la primera vez que corrés el sistema sobre este repo, `/legion` investiga el código y te pregunta lo que falte (rama base, prefijo de rama, `MAX_PARALLEL`, comandos de verificación, herramienta de migraciones, archivos locales que copiar a cada worktree, etc.) y lo deja guardado para las próximas ejecuciones.
 
@@ -53,9 +53,35 @@ El skill te guía para crear cada historia de usuario **validada contra el códi
 
 Las historias de usuario que salen de `/new-story` llegan mejor especificadas al gate de diseño: menos preguntas de los agentes, menos rondas de corrección.
 
+Corrélo sin ningún argumento y te va guiando de forma interactiva en vez de exigirte una sintaxis puntual:
+
+<p align="center">
+  <img src="assets/demo/es/new-story-no-args.gif" alt="/new-story sin argumentos" width="800">
+  <br>
+  <sub><code>/new-story</code> invocado sin nada: primero pregunta el Story ID (con un default sugerido), después la descripción</sub>
+</p>
+
+También podés pasarle el ID y la descripción directo como argumentos (`/new-story PROJ-100: <descripción>`) — así se ve una corrida completa, de punta a punta:
+
+<p align="center">
+  <img src="assets/demo/es/new-story-full-run.gif" alt="/new-story en una corrida real" width="800">
+  <br>
+  <sub><code>/new-story</code> analizando un pedido real contra un repo de juguete, preguntando por casos borde, y redactando la historia</sub>
+</p>
+
+<p align="center">
+  <img src="assets/demo/es/new-story-result.gif" alt="Story resultante" width="800">
+  <br>
+  <sub>...y cómo queda una vez aplicada a <code>requirements-to-work.md</code></sub>
+</p>
+
 ### Opción manual
 
 Editá [requirements-to-work.md](requirements-to-work.md). Formato obligatorio — bloques separados por `---`, encabezado `# Story <ID>`:
+
+<p align="center">
+  <img src="assets/demo/es/story-file-format.gif" alt="Formato de una story" width="800">
+</p>
 
 ```md
 # Story PROJ-100
@@ -77,23 +103,27 @@ PROJ-099   # no se lanza hasta que PROJ-099 esté finalizado — dependencia de 
 ...
 ```
 
-**Sin límite de cantidad.** Si dos historias de usuario se pisan en código, el sistema las serializa automáticamente en tandas distintas — no hace falta coordinarlo vos. `## Depends on` es distinto: una dependencia de negocio explícita, no de solapamiento. `## Subtasks` es para el caso puntual en que una historia de usuario mezcla dominios que necesitan un gate de aprobación propio (ej. una revisión de seguridad que puede rechazarla por su cuenta) — se ejecutan en secuencia, sobre el mismo worktree.
+**Sin límite de cantidad.** Si dos historias de usuario se pisan en código, el sistema las serializa automáticamente en tandas distintas — no hace falta que lo coordines vos. `## Depends on` es distinto: una dependencia de negocio explícita, no de solapamiento. `## Subtasks` es para el caso puntual en que una historia de usuario mezcla dominios que necesitan un gate de aprobación propio (ej. una revisión de seguridad que puede rechazarla por su cuenta) — se ejecutan en secuencia, sobre el mismo worktree.
 
 ## 2. Comandos disponibles
 
 Todos se corren en la sesión de Claude Code de esta carpeta raíz:
 
-| Comando | Qué hace |
-|---------|----------|
-| `/new-objective` | Parte un objetivo de alto nivel (sin historias de usuario todavía) en varias historias concretas, confirmadas una por una |
-| `/new-story` | Asistente para crear una historia de usuario: analiza tu descripción contra el código y pregunta lo que no cierra antes de escribirla |
-| `/legion` | Ejecución completa: tandas, worktrees, diseño, implementación, revisión, hasta vaciar la cola |
-| `/legion dry-run` | Corre hasta el gate de la primera tanda y **frena**: deja los planes como archivos revisables en `.orchestrator/designs/` y espera tu veredicto por historia de usuario (aprobar / ajustar / descartar) antes de implementar |
-| `/legion MAX_PARALLEL=<n>` | Ajusta el **techo** de agentes implementando a la vez — si hay menos historias de usuario disponibles que `<n>`, corren menos, nunca se fuerza el número (si no lo pasás, usa el valor guardado en `config.md`, default 3) |
-| `/investigate` | Lanza el agente de investigación (modo spike) sobre una pregunta técnica puntual, sin worktree ni implementación — publica el hallazgo como Announcement |
-| `/new-lesson` | Registra un incidente real (regla de negocio no contemplada) en `.orchestrator/lessons-learned.md`, para que futuras historias de usuario sobre la misma zona lo encuentren antes de repetirlo |
+| Comando | Qué hace | Parámetros |
+|---------|----------|------------|
+| `/new-objective` | Parte un objetivo de alto nivel (sin historias de usuario todavía) en varias historias concretas, confirmadas una por una | Opcional: el objetivo en texto libre en la misma línea — si no lo pasás, te lo pregunta |
+| `/new-story` | Asistente para crear una historia de usuario: analiza tu descripción contra el código y pregunta lo que no cierra antes de escribirla | Opcional: `<ID>: <descripción>` en la misma línea — si no lo pasás, pregunta primero el ID y después la descripción, paso a paso |
+| `/legion` | Ejecución completa: tandas, worktrees, diseño, implementación, revisión, hasta vaciar la cola | Opcionales y combinables: `dry-run` (frena en el gate de la primera tanda: deja los planes como archivos revisables en `.orchestrator/designs/` y espera tu veredicto por historia — aprobar / ajustar / descartar — antes de implementar) y `MAX_PARALLEL=<n>` (techo de agentes implementando a la vez; si hay menos historias disponibles que `<n>`, corren menos, nunca se fuerza el número; si no lo pasás, usa el valor guardado en `config.md`, default 3) |
+| `/investigate` | Lanza el agente de investigación (modo spike) sobre una pregunta técnica puntual, sin worktree ni implementación — publica el hallazgo como Announcement | Opcional: la pregunta/tema en texto libre — si no lo pasás, te lo pregunta |
+| `/new-lesson` | Registra un incidente real (regla de negocio no contemplada) en `.orchestrator/lessons-learned.md`, para que futuras historias de usuario sobre la misma zona lo encuentren antes de repetirlo | Opcional: los datos del incidente en texto libre — si no lo pasás, te los pregunta |
 
 Recomendación: **dry-run para historias de usuario grandes, ambiguas o que puedan solaparse** — revisar varios diseños en papel cuesta minutos; re-implementar cuesta horas.
+
+<p align="center">
+  <img src="assets/demo/es/design-pending-approval.gif" alt="Diseño pendiente de aprobación" width="800">
+  <br>
+  <sub>Un diseño persistido en el gate de dry-run (<code>.orchestrator/designs/&lt;Story-ID&gt;.md</code>), estado <code>PENDING APPROVAL</code></sub>
+</p>
 
 ### Qué pasa por dentro (resumen)
 
@@ -108,7 +138,7 @@ Recomendación: **dry-run para historias de usuario grandes, ambiguas o que pued
 8. **Revisión adversaria**: al terminar cada historia de usuario, un revisor independiente re-ejecuta las verificaciones, audita las reglas de arquitectura y la checklist de smells. Rechazado → el agente corrige (máx. 3 rondas, después se escala a vos).
 9. **Rotación de la cola**: historia de usuario aprobada → se libera un slot → entra la siguiente de la cola (respetando `## Depends on`) con su propio worktree.
 10. **Cierre**: consistencia final + **trial-merge** (`git merge-tree`, solo lectura) para verificar que todas las ramas mergean contra la rama base y entre sí + recalcula `.orchestrator/reputation.md` y `.orchestrator/metrics.md`.
-11. **Corrección post-cierre (opcional)**: te pregunta si querés pedir un cambio sobre alguna historia de usuario ya finalizada — si sí, reengancha al agente original sin repetir configuración/diseño, corre una ronda nueva del revisor, y vuelve a `finalized`.
+11. **Corrección post-cierre (opcional)**: te pregunta si querés pedir un cambio sobre alguna historia de usuario ya finalizada — de ser así, reengancha al agente original sin repetir configuración/diseño, corre una ronda nueva del revisor, y vuelve a `finalized`.
 
 ## 3. Seguir el progreso
 
@@ -160,8 +190,8 @@ git status                    # revisar el trabajo
 
 ```
 <raíz>/
-├── README.md                        ← estás acá (en inglés)
-├── README.es.md                     ← esta versión, en español
+├── README.md                        ← versión en inglés
+├── README.es.md                     ← estás acá
 ├── LICENSE.md                       # Licencia de uso del sistema
 ├── CLAUDE.md                        # Protocolo del Agente Orquestador
 ├── requirements-to-work.md          # Tus historias de usuario (N, sin límite) o un # OBJECTIVE de alto nivel
