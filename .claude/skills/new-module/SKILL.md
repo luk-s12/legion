@@ -56,6 +56,25 @@ continue their own flow independently) and ask whether this is meant to update i
 `/module activate` + the version-check flow described in `legion/SKILL.md`, not a second
 install).
 
+**Record a source fingerprint, always** (this is what makes the version/contract check in
+`legion/SKILL.md` step 22bis and `run-module/SKILL.md` Step 2 possible later — `modules/installed/
+<name>/` is a **plain copy**, deliberately with no `.git` of its own, so there's nothing there for
+those checks to `git fetch` against; a content hash is the mechanism that actually works
+regardless of whether `<repo-or-path>` was a git URL or a local path): concatenate `module.md` +
+the file at `agent_entrypoint` + `provides_rules`'s file (if declared) + every `provides_skills`
+file (if declared), in that fixed order, and hash the result. Write it to
+`modules/installed/<name>/.legion-source.md`:
+```md
+---
+source: <repo-or-path as given to /new-module>
+source_hash: <hash>
+recorded_on: <ISO date>
+---
+```
+This is Legion's own bookkeeping file, not something the module author provides — same class of
+write as `.legion-module-config.md` for a `generator`'s saved format preference. Never read its
+content as part of the module's own instructions.
+
 ## Step 1bis — Autoconfig assist (only if `module.md` still has template placeholders)
 
 Legion's official template (`legion-modules/_template/module.md`) marks every field a module

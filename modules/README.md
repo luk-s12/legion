@@ -21,9 +21,10 @@ modules/
 ├── installed/         # the external repos themselves — NEVER edited by hand, gitignored
 │   └── <module-name>/
 │       ├── module.md                  # manifest (see format below)
+│       ├── .legion-source.md          # Legion's own bookkeeping: source + content hash (never written by the module author)
 │       ├── .claude/agents/<agent>.md  # the agent(s) the module brings
 │       └── .claude/skills/<skill>/    # optional module-specific guide
-├── reports/            # results of a module run, namespaced by module
+├── reports/            # results of a module run, namespaced by module — written by the MODULE'S OWN agent, not the orchestrator
 │   └── <module-name>/
 │       ├── <Story-ID>-Rn.md   # type: gate — one file per rejection round
 │       └── <timestamp>.md     # type: generator — no Story-ID/round, see module.md's `output`
@@ -32,11 +33,15 @@ modules/
         └── <base-repo-name>/  # namespaced per destination project — Legion is multi-project
 ```
 
-`installed/`, `pending/`, `reports/` are exclusive orchestrator write zones (same "exclusive
-zone" criterion `.orchestrator/` already uses) — no other agent writes here directly. The one
-exception, same as everywhere else in Legion: the module's own agent writes **inside its own
-`modules/installed/<name>/` clone** during development of the module itself (that's the
-module author's business, done outside of any orchestration run) — never during a run.
+`installed/`, `pending/` are exclusive orchestrator write zones (same "exclusive zone" criterion
+`.orchestrator/` already uses) — no other agent writes here directly. `reports/` is different:
+the module's own agent writes ITS OWN report there directly (it has the real execution detail —
+the orchestrator only reads it afterward to append a `metrics.md` row, it never writes a
+competing copy; see `run-module/SKILL.md` Step 4 and `legion/SKILL.md` step 22bis). The one
+exception on `installed/`, same as everywhere else in Legion: the module's own agent writes
+**inside its own `modules/installed/<name>/` clone** during development of the module itself
+(that's the module author's business, done outside of any orchestration run) — never during a
+run, and never to `.legion-source.md`, which only Legion itself writes.
 
 ## Launch mechanics (how the orchestrator actually runs a module's agent)
 
@@ -65,6 +70,10 @@ things that aren't obvious from the manifest format alone:
   uses) — each detected module (skipping any `_`-prefixed folder, e.g. `_template/`) goes through
   the full install flow on its own, named `<repo>_<subfolder>`, and the command closes with a
   summary of which got registered/discarded/skipped. See `new-module/SKILL.md`, Step 1.
+  `modules/installed/<name>/` ends up as a **plain copy**, deliberately with no `.git` of its
+  own; a `.legion-source.md` sidecar file (Legion's own bookkeeping, never read by the module
+  itself) records `source` + a content hash, which is what the later version/contract check
+  compares against — see "Re-negotiation by version" above.
 - **`/module uninstall <name>`** — marks it `deprecated` if any active story still references
   it, or removes it for good (with confirmation) once nothing does.
 - **`/module activate <name>`** — reverses a `deprecated` module back to `installed` (does
@@ -217,7 +226,12 @@ its own real rules.
 - **Re-negotiation by version**: when a module is updated and its `rules.md` changes, only the
   `rule_id`s that are new or whose statement changed get re-negotiated (per project that already
   negotiated them) — the rest keep their existing verdict. See `legion/SKILL.md`, step 22bis
-  (version/contract check).
+  (version/contract check). That check is **hash-based, not `git fetch`-based**: `modules/
+  installed/<name>/` is a plain copy on purpose (see "Installing / removing a module" below), so there's no
+  `.git` there to fetch against. `/new-module` records a content hash of the module's own files
+  in `modules/installed/<name>/.legion-source.md` at install time; the version check re-resolves
+  `source` fresh and compares hashes, regardless of whether `source` was a git URL or a local
+  path — one mechanism for both.
 - **Manual re-negotiation**: `/module renegotiate <name> [rule_id]` reopens the question for the
   **current** project without waiting for a version change — see `module/SKILL.md`.
 - **No retroactivity**: re-negotiating (by version or manually) never reopens a story already
