@@ -102,6 +102,22 @@ The stage must be one of that module's `valid_stages` — if the user asks for o
 2. [security] Review of which fields are exportable (depends on 1)
 ```
 
+**Assigning a subtask to a `type: implementer` module** instead of a native domain tag: check
+`modules/registry.md` for `installed` modules with `type: implementer`, filter to ones relevant
+to what this part of the story needs, and if the user wants one, use the module's name as the
+tag:
+
+```md
+## Subtasks
+1. [implementer:code-quality-pro] Rewrite the billing module following its own OOP conventions
+2. [backend] Wiring the endpoint that consumes it (depends on 1)
+```
+
+If no `type: implementer` module is installed or relevant, don't offer this — it's never a
+default, always something the user explicitly opts into (same principle as `## Modules` above).
+A story can also be entirely assigned to one, as its only subtask (`1. [implementer:<name>] <the
+whole story>`) — no separate syntax needed for that case.
+
 If unsure whether it warrants splitting, ask the user in Step 3 instead of deciding on your own — it's a scope decision, not a minor technical detail.
 
 **Preview in a file, not just in chat**: write the complete block to `.orchestrator/preview-story-<ID>.md` — the exact same content that would go into `requirements-to-work.md`, so the user can read and edit it comfortably in their editor (markdown highlighting, no chat scroll limit) instead of only in the conversation text. Let them know it's ready for review there.

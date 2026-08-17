@@ -1,6 +1,6 @@
 ---
 name: new-module
-description: Installs an external module (a Claude Code project — an agent, optionally with skills — that plugs into an orchestration as a story gate or a standalone generator). Clones the repo, validates its manifest, runs a best-effort risk scan (tools, network patterns, vulnerable dependencies), shows the user a preview, and only registers it in modules/registry.md once accepted.
+description: Installs an external module (a Claude Code project — an agent, optionally with skills — that plugs into an orchestration as a story gate, a standalone generator, or a story implementer that writes code directly). Clones the repo, validates its manifest, runs a best-effort risk scan (tools, network patterns, vulnerable dependencies), shows the user a preview, and only registers it in modules/registry.md once accepted.
 ---
 
 Install a module into `modules/installed/<name>/` — external code Legion does not own. Your job
@@ -63,15 +63,30 @@ single fixed list would reject valid manifests of the other type:
 
 - **Always**: `type`, `tools`, `agent_entrypoint`.
 - **`type: gate`**, additionally: `valid_stages`, `default_stage`, `default_activation`,
-  `writes_to` (the key must exist even if empty), `blocking`.
-- **`type: generator`**, additionally: `output`, `scope`.
-- **`type: implementer`**: not supported by this skill yet — stop and tell the user this type
-  has no implemented contract (see the analysis' section 2), only `gate`/`generator` can be
-  installed today.
+  `writes_to` (the key must exist even if empty), `blocking`. Optionally `provides_skills`/
+  `provides_rules` (see `modules/README.md`, "Skills and rules a module brings").
+- **`type: generator`**, additionally: `output`, `scope`. If `provides_skills`/`provides_rules`
+  is present on a `generator` → **reject outright**: this `type` never enters the story/
+  `worktree-agent` cycle, there's no consumer for either field.
+- **`type: implementer`**, no additional required fields beyond `type`/`tools`/
+  `agent_entrypoint`; optionally `provides_skills`/`provides_rules` (same format as `gate`).
+  **Reject outright** if any of `writes_to`, `blocking`, `valid_stages`, `default_stage`,
+  `max_rejection_rounds` is present — none of these apply to this `type` (see
+  `modules/README.md`, "`type: implementer` — a module that writes code"). **Reject outright**
+  if `default_activation: always` is declared for this `type` — only `opt-in` is valid here
+  (the field can simply be omitted, since `opt-in` is its only valid value).
 
 If a required field for the declared `type` is missing or still an unresolved `<...>`
 placeholder that Step 1bis didn't get an answer for, **reject outright** — this is not a risk
 decision, it's an incomplete manifest that can't be evaluated. Do not proceed to Step 3.
+
+If `provides_rules` is present (`type: gate` or `type: implementer`), parse the file it points to
+(format in `modules/README.md`, "`rules.md` format") and **reject outright** if any entry is
+missing a `rule_id`, or if two entries share the same `rule_id` — a malformed rules file can't be
+negotiated later, this is caught now, at install time, same as any other incomplete manifest.
+This is form validation only — **no negotiation of accept/reject happens in this skill**: that's
+lazy, per-project, triggered by `/legion` the first time a project actually uses the module (see
+`modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, Phase 2).
 
 ## Step 3 — Consistency checks
 
@@ -145,6 +160,19 @@ the module's source)
 |---|---|---|---|
 | ... | ... | ... | ... |
 
+## Skills propuestas
+(only if `provides_skills` is present — omit the section entirely otherwise)
+| Path | Summary |
+|---|---|
+| ... | one line pulled from the `SKILL.md`'s own description/intro |
+
+## Rules propuestas
+(only if `provides_rules` is present — omit the section entirely otherwise; no verdict column —
+nothing gets negotiated here, that happens per-project the first time `/legion` needs it)
+| rule_id | Enunciado |
+|---|---|
+| ... | ... |
+
 ## Network scan (best-effort)
 | Pattern | File | Line | Note |
 |---|---|---|---|
@@ -169,6 +197,13 @@ are simply omitted, not left empty.
 ## Step 6 — Decision
 
 **Point the user at the file before asking, not just a chat summary**: an `AskUserQuestion` option's description is a one-liner — it cannot carry the full network-scan table, the complete dependency list, or the agent's entire content. Before calling `AskUserQuestion`, tell the user in chat that the full preview is at `modules/pending/<name>.md` and that it's worth opening before deciding — same pattern `/new-story` already uses for its own file preview (do not assume a short chat recap is equivalent to having read it). A condensed version of the highest-severity findings can still go in the question text itself (that's a helpful summary, not a substitute for the file), but the file reference always comes first.
+
+**Extra warning if `provides_skills`/`provides_rules` + `default_activation: always`**: if the
+module declares either field AND the user is about to register it with `default_activation:
+always`, ask a separate confirming question BEFORE the main decision below: this combination
+means every story of every project that ever uses this module gets its skills/rules included in
+its prompt automatically, with no per-story `## Modules` mention needed. `opt-in` doesn't need
+this — it's the expected behavior already.
 
 Then ask with `AskUserQuestion`:
 - **Register as-is**
@@ -200,4 +235,6 @@ doesn't exist, skip this silently.
 - Never read the content of a `.env.*.local` file — existence only.
 - Never widen `tools` beyond what Step 6 ends up registering — the orchestrator does not extend
   a module's permissions at launch time later.
-- Never install `type: implementer` — no contract defined yet.
+- `type: implementer` is installable, but never with `default_activation: always` and never with
+  `writes_to`/`blocking`/`valid_stages`/`default_stage`/`max_rejection_rounds` — reject at Step 2
+  (see `modules/README.md`, "`type: implementer` — a module that writes code").
