@@ -92,12 +92,16 @@ in before validation (see `new-module/SKILL.md`, Step 1bis). Which fields are re
   own agent reads them directly from its own clone — no injection into another agent's prompt
   needed, but the orchestrator still needs them declared, structured, to negotiate/embed/detect
   conflicts the same way it does for `gate`). **None of `writes_to`, `blocking`,
-  `valid_stages`/`default_stage`, `max_rejection_rounds` apply** — an `implementer` doesn't gate
-  at a stage, it authors, over the whole worktree (see "`type: implementer` — a module that
-  writes code" below). `/new-module` rejects any of those four fields being present on this
-  `type`. **`default_activation` can only be `opt-in`** on this `type` — `always` is rejected
-  outright: a third-party module with real write access never replaces the native implementer
-  silently across every story of every project, it's always an explicit choice per story.
+  `valid_stages`/`default_stage`, `max_rejection_rounds`, `max_concurrent` apply** — an
+  `implementer` doesn't gate at a stage, it authors, over the whole worktree (see "`type:
+  implementer` — a module that writes code" below); `max_concurrent` specifically has no
+  semaphore to plug into for this `type` (it's derived, for `gate`, from
+  `modules/reports/<name>/` entries with no final verdict — an `implementer` subtask never
+  produces a report in that shape), so it's rejected rather than accepted-but-ignored.
+  `/new-module` rejects any of those five fields being present on this `type`. **`default_activation`
+  can only be `opt-in`** on this `type` — `always` is rejected outright: a third-party module
+  with real write access never replaces the native implementer silently across every story of
+  every project, it's always an explicit choice per story.
 
 ### Example — `type: gate`
 
@@ -283,11 +287,44 @@ Unlike `gate` (verifies, can reject) and `generator` (produces a standalone arti
 author — the same role a native `worktree-agent` plays, but sourced from a third-party clone.
 
 - **No `writes_to`**: there's no smaller zone to offer than the whole worktree, so this `type`
-  doesn't declare one. Isolation is verified the other way around — `git status --porcelain` on
-  `workspace/` as a whole, **excluding the worktree assigned to this story**, taken before and
-  after the module's execution window: anything touched outside its own worktree is an incident,
-  same severity as any other isolation violation (same pattern already used for `type: generator`
-  with `scope: base-repo`, applied in reverse).
+  doesn't declare one. Isolation is verified the other way around — see "Isolation check for
+  `type: implementer`" below for the full mechanics; short version: anything touched outside its
+  own worktree is treated as an incident, same severity as any other isolation violation, except
+  where the evidence is genuinely ambiguous (a sibling story's worktree, actively worked on in
+  parallel at the same time — see below for why that case can't use a plain before/after diff).
+
+### Isolation check for `type: implementer`
+
+An `implementer` has real `Write`/`Edit` over its **entire** assigned worktree — the widest grant
+any module gets, with no technical sandbox behind it (same disclosed limitation as everywhere
+else in this trust model). What Legion verifies after the fact has to be split by what's actually
+checkable, not stated as a single blanket guarantee:
+
+- **`workspace/<base-repo>`** (the single base clone): before/after `git status --porcelain`. Any
+  diff is a hard incident — nothing legitimate touches this clone while a story is being
+  implemented (same pattern already used for `type: generator` with `scope: base-repo`).
+- **Every *other* worktree that exists at launch time, with no agent currently active on it**
+  (per `assignments.md` — `finalized`/`queued`/`aborted`, same "no active agent" criterion
+  `/run-module`'s `worktree:<Story-ID>` targeting already uses): checked exactly as hard as the
+  base repo — before/after `git status --porcelain`, any diff is an incident. Nothing legitimate
+  should be touching an idle worktree either.
+- **Every *other* worktree with an agent actively running on it during the same window** (a
+  sibling story genuinely being worked on in parallel — the normal case whenever
+  `MAX_PARALLEL > 1`, default 3): **cannot** be checked with a plain before/after diff. That
+  sibling's own agent is *expected* to change its own worktree during this exact window — a diff
+  alone can't distinguish "the module escaped its own worktree" from "the sibling story simply
+  progressed," because `git status` reports accumulated state, not which process caused it. A
+  check that ignored this would either misfire constantly (false incidents on completely normal
+  parallel work) or get silently disabled/ignored in practice to stop the noise — both worse than
+  admitting the gap. Instead: if that worktree's status changed during the window, cross-reference
+  the changed paths against that sibling story's own `.orchestrator/events/<Story-ID>.md`
+  (`FILE_CREATED`/`FILE_MODIFIED` events timestamped inside the same window). Fully explained by
+  its own reported events → nothing to do, expected. Anything left unexplained → **not** an
+  automatic incident (the evidence is ambiguous, unlike the two hard cases above) — log it as a
+  `LOW`-severity note in `modules/reports/<module-name>/<Story-ID>-Rn.md` for the orchestrator to
+  triage manually, same posture as any other ambiguous finding in this system.
+- A worktree that didn't exist yet at launch time is out of scope by construction — the module
+  only ever runs against its own, already-provisioned worktree.
 - **Never auto-selected**: an `implementer` module only ever runs because a story explicitly asks
   for it — `## Subtasks: 1. [implementer:<module-name>] <description>` in
   `requirements-to-work.md` (see `new-story/SKILL.md` and `CLAUDE.md`, "Agent selection per

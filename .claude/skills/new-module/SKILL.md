@@ -71,20 +71,31 @@ single fixed list would reject valid manifests of the other type:
 - **`type: implementer`**, no additional required fields beyond `type`/`tools`/
   `agent_entrypoint`; optionally `provides_skills`/`provides_rules` (same format as `gate`).
   **Reject outright** if any of `writes_to`, `blocking`, `valid_stages`, `default_stage`,
-  `max_rejection_rounds` is present — none of these apply to this `type` (see
-  `modules/README.md`, "`type: implementer` — a module that writes code"). **Reject outright**
-  if `default_activation: always` is declared for this `type` — only `opt-in` is valid here
-  (the field can simply be omitted, since `opt-in` is its only valid value).
+  `max_rejection_rounds`, `max_concurrent` is present — none of these apply to this `type` (see
+  `modules/README.md`, "`type: implementer` — a module that writes code"). `max_concurrent` in
+  particular has nowhere to plug into: unlike `gate`'s semaphore (step 22bis, derived from
+  `modules/reports/<name>/` entries with no final verdict), an `implementer` subtask doesn't
+  produce a report in that shape — accepting the field would just have it silently ignored at
+  launch, so it's rejected instead of shipping a knob that does nothing. **Reject outright** if
+  `default_activation: always` is declared for this `type` — only `opt-in` is valid here (the
+  field can simply be omitted, since `opt-in` is its only valid value).
 
 If a required field for the declared `type` is missing or still an unresolved `<...>`
 placeholder that Step 1bis didn't get an answer for, **reject outright** — this is not a risk
 decision, it's an incomplete manifest that can't be evaluated. Do not proceed to Step 3.
 
-If `provides_rules` is present (`type: gate` or `type: implementer`), parse the file it points to
-(format in `modules/README.md`, "`rules.md` format") and **reject outright** if any entry is
-missing a `rule_id`, or if two entries share the same `rule_id` — a malformed rules file can't be
-negotiated later, this is caught now, at install time, same as any other incomplete manifest.
-This is form validation only — **no negotiation of accept/reject happens in this skill**: that's
+If `provides_skills` is present (`type: gate` or `type: implementer`), verify each listed path
+resolves to a real file inside `modules/installed/<name>/` — **reject outright** if any path is
+missing, same as a missing required field: a dangling `provides_skills` entry would otherwise
+only surface later, at runtime, when an agent tries to read `MODULE_SKILLS` and fails mid-story.
+
+If `provides_rules` is present (`type: gate` or `type: implementer`), verify its path resolves to
+a real file inside `modules/installed/<name>/` — **reject outright** if missing, same reasoning
+as above — then parse it (format in `modules/README.md`, "`rules.md` format") and **reject
+outright** if any entry is missing a `rule_id`, or if two entries share the same `rule_id` — a
+malformed rules file can't be negotiated later, this is caught now, at install time, same as any
+other incomplete manifest. This is form validation only — **no negotiation of accept/reject
+happens in this skill**: that's
 lazy, per-project, triggered by `/legion` the first time a project actually uses the module (see
 `modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, Phase 2).
 
@@ -236,5 +247,8 @@ doesn't exist, skip this silently.
 - Never widen `tools` beyond what Step 6 ends up registering — the orchestrator does not extend
   a module's permissions at launch time later.
 - `type: implementer` is installable, but never with `default_activation: always` and never with
-  `writes_to`/`blocking`/`valid_stages`/`default_stage`/`max_rejection_rounds` — reject at Step 2
-  (see `modules/README.md`, "`type: implementer` — a module that writes code").
+  `writes_to`/`blocking`/`valid_stages`/`default_stage`/`max_rejection_rounds`/`max_concurrent` —
+  reject at Step 2 (see `modules/README.md`, "`type: implementer` — a module that writes code").
+- Never accept a `provides_skills`/`provides_rules` path that doesn't resolve to a real file
+  inside the module's own clone — reject at Step 2, don't let it surface later as a runtime read
+  failure mid-story.
