@@ -29,6 +29,13 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
 │   ├── <base-repo>/                 # ONLY real clone of the destination project. NEVER worked on directly here
 │   └── worktrees/
 │       └── <Story-ID>/                 # One worktree per story, with its own working branch
+├── modules/                          # External modules (gate/generator) — see modules/README.md, self-contained subsystem
+│   ├── README.md
+│   ├── registry.md                   # Installed modules + state (installed/deprecated/uninstalled)
+│   ├── pending/<module-name>.md       # Transient risk previews from /new-module
+│   ├── installed/<module-name>/       # External clones (their own git) — NEVER edited by hand, gitignored
+│   ├── reports/<module-name>/         # Results per run (Story-ID-Rn.md for gate, timestamp.md for generator)
+│   └── output/<module-name>/<base-repo-name>/  # Artifacts from type: generator modules, gitignored (regenerable)
 ├── .claude/
 │   ├── agents/
 │   │   ├── worktree-agent.md               # Generalist implementer (default)
@@ -46,6 +53,9 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
 │       ├── new-story/SKILL.md          # /new-story command
 │       ├── new-lesson/SKILL.md         # /new-lesson command
 │       ├── investigate/SKILL.md        # /investigate command (standalone spike mode)
+│       ├── new-module/SKILL.md         # /new-module command (installs an external module, with risk preview)
+│       ├── module/SKILL.md             # /module uninstall|activate command (module lifecycle)
+│       ├── run-module/SKILL.md         # /run-module command (invokes a type: generator module on demand)
 │       ├── patterns-and-smells/SKILL.md  # Guide to patterns and code smells for the destination project (mandatory)
 │       ├── security-guide/SKILL.md     # OWASP checklist for worktree-agent-security
 │       └── data-guide/SKILL.md         # Migration/modeling checklist for worktree-agent-data
@@ -55,6 +65,8 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
     ├── assignments.md               # LIVE BOARD: story ↔ worktree ↔ branch ↔ batch ↔ status ↔ last activity + overlap matrix + batch plan
     ├── components.md               # Registry of shared components (written only by the orchestrator) — architectural memory across batches
     ├── lessons-learned.md      # Incidents from business rules that weren't accounted for — permanent memory by code zone
+    ├── module-rules/<base-repo-name>/<module-name>.md  # provides_rules negotiation verdicts, namespaced per project — never cross-read between projects
+    ├── module-rules/<base-repo-name>/_conflicts.md      # resolutions to rule-vs-rule conflicts within a story (module-vs-module, or module-vs-core)
     ├── objectives/OBJ-<NNN>.md       # Breakdown of a high-level objective into stories, with its reasoning — permanent memory
     ├── reputation.md                # Audit by agent/domain (read-only for the user) — does not change orchestrator behavior
     ├── metrics.md                   # Duration and token consumption per story/agent/orchestration run (read-only) — does not change orchestrator behavior
@@ -101,6 +113,8 @@ Not every story is implemented by the same type of agent. `.orchestrator/capabil
 
 **Tie-break between 1 and 3**: is the extra domain "another file type" the generalist already knows how to write (a migration, a doc), or "another approval criterion" (a gate that can reject the story on its own)? The former → case 1. The latter → case 3.
 
+4. **A `## Subtasks` entry explicitly names a `type: implementer` module** (`[implementer:<module-name>]`, see `modules/README.md`) instead of a native domain tag → that subtask's agent is the module's own (`agent_entrypoint`), not a native `.claude/agents/worktree-agent*.md`. This is **never** something the automatic selection rule reaches for on its own — the rule above only ever picks between native agents; a module only authors code because a story asked for it by name, explicitly, in `## Subtasks`.
+
 `worktree-agent-qa` is not an alternative to the generalist: it runs **afterward**, on the same worktree once already `FINALIZED`, verifying the implementation against the story's `## Acceptance criteria` with real tests it runs (never deducing without running them). `research-agent` also doesn't compete for selection: it doesn't use a worktree, runs read-only against the base repo, either in spike mode (on request, via `/investigate`) or in prior-research mode (automatic, before design, on stories whose zone is considered risky — see `.orchestrator/lessons-learned.md`).
 
 ## Subtasks within a story (Heterogeneous cells)
@@ -114,6 +128,8 @@ A story can declare, in `requirements-to-work.md`, a `## Subtasks` section when 
 ```
 
 The worktree is still **just one per story** — the orchestrator launches the agents in sequence according to the declared dependencies, each on the same worktree/branch, never two at once (the hard isolation rule doesn't change). `designs/<Story-ID>.md` gains a subsection per subtask; each one can have its own gate if its type requires it (e.g. the `[security]` subtask can block closing the story even if `[backend]` was already approved). A story without `## Subtasks` works exactly as always, a single agent end to end.
+
+A subtask's domain tag can also name an installed `type: implementer` module (`[implementer:<module-name>]`, see `modules/README.md`) instead of a native domain — same sequencing rule, same single-worktree isolation, the only difference is whose agent runs. Never selected automatically; only when the story names it explicitly.
 
 ## Breaking down objectives (before stories exist)
 
@@ -187,6 +203,14 @@ These two mechanisms **do not take authority away from the orchestrator**: it is
 - **Never** remove a worktree with uncommitted changes (except for a discard confirmed by the user).
 - An agent **never** works outside its worktree nor communicates directly with another (never `SendMessage` between agents); every coordination decision goes through the orchestrator. **Sole exception**: an agent may write a Signal or an Announcement in `.orchestrator/` — that is depositing information into the shared environment, not direct communication between worktrees, and it never replaces or bypasses the orchestrator's approval for anything.
 - Every architectural decision is recorded in `.orchestrator/decisions/DEC-NNN.md` with: context, alternatives compared, criteria evaluated, decision, and orders issued.
+- **Modules** (external code installed under `modules/`, see `modules/README.md`) are subject to the same isolation rules as any agent, with the trust boundary made explicit rather than assumed:
+  - A `type: gate` module launched by the orchestrator only writes inside the worktree of the story that triggered it (or the zone declared in its `writes_to`, if it's a subpath of that worktree) — validated before launch and checked again after, never just declared. A `type: generator` module with `scope: base-repo` gets the equivalent check against `workspace/<base-repo>` itself (`git status --porcelain` before/after launch), since that's the single clone every worktree is born from — any unexplained change there is treated as an incident, same severity as a worktree isolation violation.
+  - The orchestrator **never** widens a module's tools beyond what was validated in its `module.md` at install time (`/new-module`) — if `tools` includes `Bash`, the module can still read anything the process can reach regardless of `writes_to`/`output`; this is a disclosed, accepted risk (there is no sandboxing in this system), not something any check here technically prevents.
+  - A module never communicates with another worktree, another module, or writes directly to `.orchestrator/signals/`/`.orchestrator/announcements/` — it reports findings in `modules/reports/`, and the orchestrator decides whether one warrants escalating to a Signal or Announcement itself. When it does, the resulting file carries an `Origin: module:<name> (modules/reports/<module>/<Story-ID>-Rn.md)` field, so it's never indistinguishable from one a native agent raised.
+  - A `type: gate` module can advance a rejection earlier in the cycle; it never replaces `worktree-reviewer` as the sole gate to `finalized` — not configurable by `blocking: true` or any other manifest option.
+  - A module's `provides_skills`/`provides_rules` (see `modules/README.md`) are **never** written or copied into any worktree or into the destination project — they're paths read at launch time, recomputed once per story (`legion/SKILL.md`, step 13bis), never persisted as a merged file in this core or in the destination project. Accepted rules DO end up embedded as real text in `designs/<Story-ID>.md` (step 19ter) — that's memory of the story, not a fusion into the core. Negotiation verdicts (`.orchestrator/module-rules/<base-repo-name>/`) are namespaced per project — never read across two different `base_repo` values, even within the same Legion instance over time.
+  - A `type: implementer` module (see `modules/README.md`) has `Write`/`Edit` over the **entire** worktree of the story that names it in `## Subtasks: [implementer:<module-name>]` — never over any other worktree, never over `workspace/<base-repo>` directly. Verified before and after the subtask's execution window: hard `git status --porcelain` diff (any change is an incident) against `workspace/<base-repo>` and against every other worktree with no agent currently active on it; for a sibling worktree with its own agent genuinely running in parallel at the same time (the normal `MAX_PARALLEL > 1` case), a plain diff can't tell that story's own legitimate progress apart from the module escaping its worktree — see `modules/README.md`, "Isolation check for `type: implementer`" for how that case is cross-referenced against the sibling's own events instead of auto-flagged. It never activates automatically: `default_activation: always` is invalid for this `type` (rejected at `/new-module`), and the orchestrator's automatic agent-selection rule never picks a module on its own (see "Agent selection per story," point 4).
+  - A module of any `type` cannot combine `type: implementer` with `type: gate` — `type` is a single value per manifest, so a module can never verify (gate) and author (implementer) the same piece of work; this is prevented structurally by the schema, not by a separate rule to enforce.
 
 ---
 

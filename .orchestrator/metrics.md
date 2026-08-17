@@ -38,3 +38,13 @@ It is permanent memory (never resets between runs), same criterion as `reputatio
 ## Bottlenecks detected (last orchestration run)
 
 *(no data yet)*
+
+## Standalone module runs
+
+Invocations of `/run-module` (see `modules/README.md`) — these never belong to a story, batch,
+or orchestration run, so they don't fit the tables above. Updated by `/run-module` itself right
+after each invocation, from the same `Agent`-tool return values the tables above already use.
+
+| Module | Timestamp | Ran against | Duration | Tokens |
+|---|---|---|---|---|
+| *(no data yet)* | | | | |

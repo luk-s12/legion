@@ -55,7 +55,7 @@ Explicitly flag **possible bugs**: if the description, applied as-is on top of t
 
 ## Step 4 — Draft, preview, and confirm
 
-Write the story's persisted **prose** (the description paragraph and the bullet content under each section) in whatever `.orchestrator/config.md`'s `content_language` field says (default English) — regardless of what language you and the user chatted in to get here. The section headers themselves (`# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Subtasks`) always stay in English exactly as shown below — the orchestrator parses those literally (e.g. to build the dependency graph from `## Depends on`), so translating them would silently break scheduling.
+Write the story's persisted **prose** (the description paragraph and the bullet content under each section) in whatever `.orchestrator/config.md`'s `content_language` field says (default English) — regardless of what language you and the user chatted in to get here. The section headers themselves (`# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Modules`, `## Subtasks`) always stay in English exactly as shown below — the orchestrator parses those literally (e.g. to build the dependency graph from `## Depends on`), so translating them would silently break scheduling.
 
 Build the story's final block:
 
@@ -76,11 +76,23 @@ Build the story's final block:
 ## Depends on (only if applicable)
 - <optional — see below>
 
+## Modules (only if applicable)
+- <optional — see below>
+
 ## Subtasks (only if applicable)
 - <optional — see below>
 ```
 
 **When to add `## Depends on`**: if this story doesn't make sense before another one is already `finalized`, for a **business** reason (not code — code overlap is already handled automatically by the scheduler serializing batches). Example: "the partial-refunds endpoint doesn't make sense before the partial-payments model exists", even if they don't share any file today. Format: `- <ID of the other story>`. If unsure whether it's a real dependency or just an ordering preference, ask the user in Step 3.
+
+**When to add `## Modules`**: after the acceptance criteria are settled, check `modules/registry.md` for `type: gate` modules (never `type: generator` — those aren't story-scoped, they're invoked separately with `/run-module`, see `modules/README.md`). Filter to the ones whose `valid_stages` are relevant, show them to the user, and ask if they want any activated for this story. If they pick one, write:
+
+```md
+## Modules
+- <module-name> @ <stage>
+```
+
+The stage must be one of that module's `valid_stages` — if the user asks for one that isn't, tell them instead of writing it as-is (same criterion already applied to `## Depends on` against nonexistent IDs). Omit the stage to fall back to the module's `default_stage`. No need to ask about modules with `default_activation: always` — those run on every story that passes through their stage regardless of `## Modules`.
 
 **When to add `## Subtasks`**: if during analysis you detected that the story combines domains with a categorically distinct approval criterion (e.g. one part needs a security sign-off separate from the code, not just "another type of file") — the same criterion `/legion` uses to decide between generalist and subtasks. Format:
 
@@ -89,6 +101,22 @@ Build the story's final block:
 1. [backend] Export endpoint
 2. [security] Review of which fields are exportable (depends on 1)
 ```
+
+**Assigning a subtask to a `type: implementer` module** instead of a native domain tag: check
+`modules/registry.md` for `installed` modules with `type: implementer`, filter to ones relevant
+to what this part of the story needs, and if the user wants one, use the module's name as the
+tag:
+
+```md
+## Subtasks
+1. [implementer:code-quality-pro] Rewrite the billing module following its own OOP conventions
+2. [backend] Wiring the endpoint that consumes it (depends on 1)
+```
+
+If no `type: implementer` module is installed or relevant, don't offer this — it's never a
+default, always something the user explicitly opts into (same principle as `## Modules` above).
+A story can also be entirely assigned to one, as its only subtask (`1. [implementer:<name>] <the
+whole story>`) — no separate syntax needed for that case.
 
 If unsure whether it warrants splitting, ask the user in Step 3 instead of deciding on your own — it's a scope decision, not a minor technical detail.
 

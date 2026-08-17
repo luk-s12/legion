@@ -2,8 +2,16 @@
 /workspace/*
 !/workspace/README.md
 
+# Module repos are external clones (their own git), and generator artifacts are regenerable.
+/modules/installed/*
+!/modules/installed/.gitkeep
+/modules/output/*
+!/modules/output/.gitkeep
+
 # Local Claude Code permissions config (contains paths/approvals for this machine).
 .claude/settings.local.json
 
 # Custom
 feature/*
+assets/build-gifs/*
+legion-modules/*

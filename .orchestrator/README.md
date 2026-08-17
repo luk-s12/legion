@@ -114,14 +114,14 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
 - `reputation.md` — **read-only audit for the user**, by agent/domain: stories from the last 20, first-round approval rate, post-closure findings (from `lessons-learned.md`), and post-closure corrections (from Phase 6). **The Orchestrator never consults it to decide anything** — there is no "lightweight gate" of any kind in this system; the file exists solely so the user can detect which agent/domain needs adjustment (prompt, patterns guide, a new specialist). Format:
 
   ```md
-  | Agent | Domain | Story (last 20) | Approved on 1st round | Post-closure findings | Post-closure corrections (Phase 6) |
+  | Agent | Domain | Story (last 20) | Approved on 1st round | Module gate rounds | Reviewer rounds | Post-closure findings | Post-closure corrections (Phase 6) |
   ## Post-closure findings detail
   | Story | Agent | Related lesson | Zone |
   ## Post-closure corrections detail (Phase 6)
   | Story | Agent | What was requested | Resulting round |
   ```
 
-  Recalculated at the Closure of each orchestration run, when `/new-lesson` records a finding with an identifiable story, and when Phase 6 adds a correction round. Permanent memory, never resets.
+  Recalculated at the Closure of each orchestration run, when `/new-lesson` records a finding with an identifiable story, and when Phase 6 adds a correction round. Permanent memory, never resets. **`Module gate rounds`/`Reviewer rounds`** (see `modules/README.md`) are separate columns: a story only counts as "approved on 1st round" if both are clean — `Module gate rounds` 0 and the reviewer's own R1 already `APPROVED`. `type: generator` modules never get a row here (no approval verdict to measure).
 
 - `metrics.md` — duration and token consumption, **read-only for the user, same as `reputation.md`**: the orchestrator never consults it to decide anything. Format:
 
@@ -130,11 +130,15 @@ This folder is the multi-agent system's event bus. **Do not edit by hand during 
   | Story | Agent | Model | Total duration | Time at gate | Review rounds | Tokens (implementation) | Tokens (review) |
   | Agent | Average duration | Average tokens | Stories processed |
   ## Bottlenecks detected (last orchestration run)
+  ## Standalone module runs
+  | Module | Timestamp | Ran against | Duration | Tokens |
   ```
 
   Recalculated at the Closure of each orchestration run, from the timestamps already present in `events/<Story-ID>.md`, from `subagent_tokens`/`tool_uses`/`duration_ms` the `Agent` tool returns when each subagent completes, and from the `model` the Orchestrator itself passed on that `Agent` call (or "inherited" if it omitted the override) — no new instrumentation required. Permanent memory, never resets.
 
   **`Review rounds`** counts only `reviews/<Story-ID>-code-review-R*.md` (code review, post-`FINALIZED`) — `reviews/<Story-ID>-design-review-D*.md` (dry-run design review, no verdict) is never mixed into this column; iterating a design several rounds is expected and healthy, not a review "round" in the same sense. `Time at gate`, in dry-run runs, includes the time spent in the design review loop before the approval was sent.
+
+  **"Standalone module runs"** is populated by `/run-module` itself, right after each invocation — not at orchestration Closure, since these runs never belong to a story/batch/run (see `modules/README.md`).
 
 ## Worktree infrastructure (doesn't live in `.orchestrator/`, but the board references it)
 
