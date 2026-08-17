@@ -13,11 +13,48 @@ against.
 
 ## Step 1 — Clone
 
-Clone (or link, if it's a local path) the external repo into `modules/installed/<name>/`. Derive
-`<name>` from the repo name unless the user specifies one. If a module with that name is already
-`installed`/`deprecated` in `modules/registry.md`, stop and ask whether this is meant to update
-it instead (that's `/module activate` + the version-check flow described in `legion/SKILL.md`,
-not a second install).
+Clone (or link, if it's a local path) the external repo into a staging location (a temp folder —
+never directly into `modules/installed/` yet, since a multi-module repo needs splitting before
+anything lands there permanently, see below).
+
+**Detect single vs. multi-module repo**: check for `module.md` at the staged clone's root.
+- **Found at root** → single-module repo, the common case. `<name>` = the repo name unless the
+  user specifies one. Copy the staged clone into `modules/installed/<name>/` and continue to Step
+  1bis with that one module.
+- **Not found at root** → scan immediate subdirectories for a `module.md` each (one level deep
+  only — this isn't a recursive module finder, just support for the "one repo, several sibling
+  module folders" layout the official `legion-modules` template repo itself uses). **Skip any
+  subdirectory starting with `_`** (e.g. `_template/`) — that's scaffolding/reference material,
+  never an installable module, same convention Step 1bis already treats `_template/module.md` as
+  a template source rather than something to install as-is.
+  - **Exactly one match** → treat it the same as the single-module case above (copy that
+    subfolder's content into `modules/installed/<name>/`, `<name>` = the repo name unless
+    specified), not the multi-module flow below — no point announcing "1 of 1 modules" as if it
+    were a batch.
+  - **Two or more matches** → multi-module repo. Report to the user, before doing anything else,
+    which module folders were found (and which were skipped for starting with `_`). For **each**
+    detected module, in sequence — never in parallel, so previews/registry writes never race —
+    run Steps 1bis through 7 as normal, with two adjustments: `<name>` = `<repo>_<subfolder>`
+    (underscore joining the repo's own name and the subfolder's name, each keeping its own
+    internal hyphens as-is — e.g. a `legion-modules` repo with an `api-collections/` subfolder
+    installs as `legion-modules_api-collections`) and the module's source directory for every
+    subsequent step is that subfolder of the staged clone, copied into
+    `modules/installed/<repo>_<subfolder>/` as its own self-contained module directory (never a
+    symlink or shared clone between the detected modules — each installed module folder is
+    independent, same invariant every other part of this system already assumes about
+    `modules/installed/<name>/`). **After the last one is resolved** (registered, trimmed, or
+    discarded), report a final summary: which of the detected modules got registered, which were
+    discarded, and which were skipped for starting with `_` — so the user doesn't have to
+    reconstruct the outcome from N separate decision prompts.
+- Delete the staging clone once every detected module has been copied into its final
+  `modules/installed/<name>/` location (single or multi-module case alike) — nothing should be
+  left referencing the temporary checkout.
+
+For every module resolved above: if a module with that name is already `installed`/`deprecated`
+in `modules/registry.md`, stop (for that module only — a multi-module repo's other modules
+continue their own flow independently) and ask whether this is meant to update it instead (that's
+`/module activate` + the version-check flow described in `legion/SKILL.md`, not a second
+install).
 
 ## Step 1bis — Autoconfig assist (only if `module.md` still has template placeholders)
 

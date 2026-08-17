@@ -59,7 +59,12 @@ things that aren't obvious from the manifest format alone:
 
 - **`/new-module <repo-or-path>`** — clones the module, validates its manifest, runs a
   best-effort risk scan (tools classification, network patterns, dependency vulnerabilities),
-  shows a preview, and only registers it once the user accepts.
+  shows a preview, and only registers it once the user accepts. **Also detects a repo that holds
+  several sibling modules** instead of just one (`module.md` not at the repo root, but one level
+  down in more than one subfolder — the layout the official `legion-modules` template repo itself
+  uses) — each detected module (skipping any `_`-prefixed folder, e.g. `_template/`) goes through
+  the full install flow on its own, named `<repo>_<subfolder>`, and the command closes with a
+  summary of which got registered/discarded/skipped. See `new-module/SKILL.md`, Step 1.
 - **`/module uninstall <name>`** — marks it `deprecated` if any active story still references
   it, or removes it for good (with confirmation) once nothing does.
 - **`/module activate <name>`** — reverses a `deprecated` module back to `installed` (does
