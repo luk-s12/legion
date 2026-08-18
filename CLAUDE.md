@@ -68,6 +68,7 @@ This system uses **a single base clone** (`workspace/<base-repo>/`) from which t
     ├── module-rules/<base-repo-name>/<module-name>.md  # provides_rules negotiation verdicts, namespaced per project — never cross-read between projects
     ├── module-rules/<base-repo-name>/_conflicts.md      # resolutions to rule-vs-rule conflicts within a story (module-vs-module, or module-vs-core)
     ├── objectives/OBJ-<NNN>.md       # Breakdown of a high-level objective into stories, with its reasoning — permanent memory
+    ├── stories/<Story-ID>.md         # Persistent /new-story and /new-objective working file: holds the Level 1 semantic preview while drafting, then the Level 2 final story after Checkpoint A — never deleted, so the story survives even if requirements-to-work.md is reset. Not consumed directly by /legion, which still reads only requirements-to-work.md
     ├── reputation.md                # Audit by agent/domain (read-only for the user) — does not change orchestrator behavior
     ├── metrics.md                   # Duration and token consumption per story/agent/orchestration run (read-only) — does not change orchestrator behavior
     ├── events/<Story-ID>.md           # Event log for each agent (append-only)

@@ -68,39 +68,18 @@ With the split confirmed, persist it **immediately** — before specifying any s
 <if merging/splitting differently was considered and discarded, why — or "none">
 ```
 
-## Step 6 — Specify each story (one by one, same process as `/new-story`)
+## Step 6 — Specify each story (one by one, delegating to `/new-story`'s own flow)
 
-For each confirmed candidate, in whatever order makes the most sense (if there's `## Depends on`, the one that depends on nothing goes first):
+For each confirmed candidate, in dependency-free-first order (if there's `## Depends on` among candidates, the ones that depend on nothing go first; a candidate only starts once every candidate it depends on has already been persisted):
 
 1. **Analyze that candidate's specific zone** against the real code — same level of detail as `/new-story`'s Step 2: map the impact zone, cross-check claims against what exists, look for typical gaps (edge cases, states, permissions, idempotency, integrations, response and errors).
 2. **Ask about what doesn't add up**, iteratively, with `AskUserQuestion` — same criterion as `/new-story`'s Step 3: cite code evidence, flag possible bugs, batches of up to 4 questions.
-3. **Draft the story's final block** (same format `/new-story` produces):
+3. **Run `/new-story`'s Step 4 in full** for this candidate — Level 1 semantic preview on `.orchestrator/stories/<ID>.md`, Checkpoint A, Level 2 final story, coverage matrix, mandatory editorial pass, Checkpoint B, and persistence exactly as `/new-story` defines it. Don't keep a separate template here — `new-story/SKILL.md` is the single normative source for the story's format and checkpoints; this step only supplies the candidate's own ID, `## Depends on` (referencing other stories from this same objective when applicable), and any `## Subtasks` already decided in Step 4 of this skill.
+4. "Confirmed" means the candidate passed **both** Checkpoint A and Checkpoint B, and its persistence into `requirements-to-work.md` was verified — not just that a preview was accepted. Only after that, update the corresponding row in `.orchestrator/objectives/OBJ-<NNN>.md` with the real assigned ID.
+5. If, once analyzed in depth, this candidate's scope changed substantially from what Step 4 assumed (it needs to split, merge with another, or be dropped), reopen the split decision with the user **before** persisting this candidate — don't persist a story that no longer matches what the confirmed breakdown described.
+6. Continue with the next candidate whose dependencies are already persisted.
 
-```md
-# Story <ID>
-
-<Refined description>
-
-## Acceptance criteria
-- ...
-
-## Definitions taken
-- ...
-
-## Estimated impact zone
-- ...
-
-## Depends on
-- <ID of another story from this same objective, if applicable — or delete this section>
-
-## Subtasks (optional)
-- <if this particular candidate warrants it — rare, already resolved in Step 4>
-```
-
-4. **Show it and confirm** with the user.
-5. **Save immediately** to `requirements-to-work.md` (append it at the end preceded by `---`, or replace the first "(Replace with...)" placeholder if one exists) — do not wait for the other candidates to be ready. If the session cuts off mid-specification, what's already confirmed is not lost.
-6. Update the corresponding row in `.orchestrator/objectives/OBJ-<NNN>.md` with the real assigned ID.
-7. Continue with the next candidate.
+If the session cuts off mid-specification, whatever was already confirmed and persisted is not lost — each candidate is saved to `requirements-to-work.md` as soon as it individually clears Checkpoint B, without waiting for the others.
 
 ## Step 7 — Close
 
@@ -108,7 +87,8 @@ When all candidates are written, report: how many User Stories were created, the
 
 ## Rules
 
-- **Read-only over the base repo**: never modifies code, only `requirements-to-work.md` and `.orchestrator/objectives/`.
+- **Read-only over the base repo**: never modifies code.
+- Its write zones are `requirements-to-work.md`, `.orchestrator/objectives/OBJ-<NNN>.md`, and `.orchestrator/stories/<Story-ID>.md` (created/updated by the delegated `/new-story` flow in Step 6). It may create `.orchestrator/stories/` idempotently if missing.
 - Doesn't implement anything or run `/legion` — ends as soon as the User Stories are written.
 - Don't invent system behavior or candidates without evidence: every claim has to come from having read the real code.
 - If in Step 6 a candidate turns out, once analyzed in depth, to be much bigger or different from what it looked like in the initial split, say so and offer to split it into more User Stories — the Step 4 split is a proposal, not a closed contract.
