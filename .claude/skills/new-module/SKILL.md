@@ -2,6 +2,19 @@
 name: new-module
 description: Installs an external module (a Claude Code project — an agent, optionally with skills — that plugs into an orchestration as a story gate, a standalone generator, or a story implementer that writes code directly). Clones the repo, validates its manifest, runs a best-effort risk scan (tools, network patterns, vulnerable dependencies), shows the user a preview, and only registers it in modules/registry.md once accepted.
 ---
+## Mandatory project scope
+
+Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
+The selected catalog entry is the sole configuration authority. Use only
+`requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
+namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
+registration. Neither state permits old singleton paths.
+
+For a project-shared write, acquire the brief project mutex, reread current state, write and validate
+a sibling candidate, rename it to the known destination, reread, then release the owned mutex.
+Do not hold a mutex while interviewing, researching, testing, reviewing or waiting. Catalog and global `modules/registry.md` writes instead use the brief global metadata mutex. Never acquire or release a story claim unless this skill
+is `/legion` performing a reservation.
+
 
 Install a module into `modules/installed/<name>/` — external code Legion does not own. Your job
 is **validation before trust**, never a rubber stamp: `Tools:`/`Writes to:` declared in a
@@ -16,6 +29,12 @@ against.
 Clone (or link, if it's a local path) the external repo into a staging location (a temp folder —
 never directly into `modules/installed/` yet, since a multi-module repo needs splitting before
 anything lands there permanently, see below).
+
+Whenever the flow below resolves a final `<name>` and is about to copy, first refuse to overwrite
+an existing `modules/installed/<name>/`. If its registry row is `installed`/`deprecated`, ask
+whether this was meant as an update (`/module activate` plus version check, not a second install).
+If its row is `uninstalled` or absent, report the exact residue and require separately confirmed,
+contained cleanup; never reuse it silently.
 
 **Detect single vs. multi-module repo**: check for `module.md` at the staged clone's root.
 - **Found at root** → single-module repo, the common case. `<name>` = the repo name unless the
@@ -50,14 +69,8 @@ anything lands there permanently, see below).
   `modules/installed/<name>/` location (single or multi-module case alike) — nothing should be
   left referencing the temporary checkout.
 
-For every module resolved above: if a module with that name is already `installed`/`deprecated`
-in `modules/registry.md`, stop (for that module only — a multi-module repo's other modules
-continue their own flow independently) and ask whether this is meant to update it instead (that's
-`/module activate` + the version-check flow described in `legion/SKILL.md`, not a second
-install).
-
 **Record a source fingerprint, always** (this is what makes the version/contract check in
-`legion/SKILL.md` step 22bis and `run-module/SKILL.md` Step 2 possible later — `modules/installed/
+`legion/SKILL.md` "Module stages" and `run-module/SKILL.md` "Version/contract check" possible later — `modules/installed/
 <name>/` is a **plain copy**, deliberately with no `.git` of its own, so there's nothing there for
 those checks to `git fetch` against; a content hash is the mechanism that actually works
 regardless of whether `<repo-or-path>` was a git URL or a local path): concatenate `module.md` +
@@ -79,7 +92,7 @@ content as part of the module's own instructions.
 
 Legion's official template (`legion-modules/_template/module.md`) marks every field a module
 author has to decide with a literal `<...>` placeholder — the same convention
-`.orchestrator/config.md` already uses for unresolved project config. Before parsing required
+the selected catalog entry and real repo use for unresolved project facts. Before parsing required
 fields in Step 2, check whether `type` or any field required for it still contains a `<...>`
 placeholder. If so, this is a manifest someone copied from the template and hasn't finished
 filling in — a real, expected case, not a broken module. Don't reject it; run an interactive
@@ -129,8 +142,8 @@ single fixed list would reject valid manifests of the other type:
   **Reject outright** if any of `writes_to`, `blocking`, `valid_stages`, `default_stage`,
   `max_rejection_rounds`, `max_concurrent` is present — none of these apply to this `type` (see
   `modules/README.md`, "`type: implementer` — a module that writes code"). `max_concurrent` in
-  particular has nowhere to plug into: unlike `gate`'s semaphore (step 22bis, derived from
-  `modules/reports/<name>/` entries with no final verdict), an `implementer` subtask doesn't
+  particular has nowhere to plug into: unlike a gate's active-report limit (see `legion/SKILL.md`,
+  "Module stages", derived from `modules/reports/<name>/<project>/` entries with no final verdict), an implementer subtask doesn't
   produce a report in that shape — accepting the field would just have it silently ignored at
   launch, so it's rejected instead of shipping a knob that does nothing. **Reject outright** if
   `default_activation: always` is declared for this `type` — only `opt-in` is valid here (the
@@ -153,7 +166,7 @@ malformed rules file can't be negotiated later, this is caught now, at install t
 other incomplete manifest. This is form validation only — **no negotiation of accept/reject
 happens in this skill**: that's
 lazy, per-project, triggered by `/legion` the first time a project actually uses the module (see
-`modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, Phase 2).
+`modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, "Module stages").
 
 ## Step 3 — Consistency checks
 
@@ -280,13 +293,24 @@ Then ask with `AskUserQuestion`:
   action.
 - **Discard**
 
-Delete `modules/pending/<name>.md` in every case. If registered, write the row to
-`modules/registry.md` with state `installed`. If `requires_local_config: true` and
-`modules/installed/<name>/.env.<base-repo>.local` doesn't exist, tell the user it's needed before
+For either registration choice, acquire the global metadata mutex at
+`.orchestrator/runtime/catalog.lock`, reread `modules/registry.md`, apply the installed row to a
+sibling `modules/registry.md.candidate-<session>`, validate that every prior row remains exactly once
+and the new row is complete, rename it to the exact registry destination, reread/compare it, then
+release the verified mutex. Only after this durable publication delete the exact
+`modules/pending/<name>.md`. For **Discard**, acquire the same global metadata mutex, reread the
+registry and verify that `<name>` has no row. Then resolve the just-created
+`modules/installed/<name>/`, prove it is the exact expected child (matching name, contained real
+path, not a symlink/junction), and remove that exact unregistered tree plus the exact
+`modules/pending/<name>.md` after confirmation. Never use a shell glob, `rm -r` or `rm -rf`; no
+broad deletion permission is granted. If cleanup fails, release the mutex, report the precise
+residue and leave the registry unchanged so a later confirmed retry is safe. If
+`requires_local_config: true` and
+`modules/installed/<name>/.env.<project>.local` doesn't exist, tell the user it's needed before
 the module's first real run — check existence only, never read its content.
 
-Clamp `max_rejection_rounds` (if declared, `type: gate` only) to `config.md`'s
-`max_correction_rounds` — if it's higher, lower it with a note explaining why.
+Clamp `max_rejection_rounds` (if declared, `type: gate` only) to the core three-round review limit
+— if it's higher, lower it with a note explaining why.
 
 ## Step 7 — Signal capture (optional, skippable)
 

@@ -1,4 +1,9 @@
 <p align="center">
+
+> Legion es multiproyecto desde la instalación. Registrá/seleccioná el proyecto en
+> `.orchestrator/projects.yml`; requirements y memoria quedan namespaced. Varias sesiones de Claude
+> Code pueden poseer claims de stories distintas del mismo proyecto. Un batch es una vista de
+> planificación, no una barrera.
   <img src="assets/legion-wordmark.png" alt="LEGION" width="360">
 </p>
 
@@ -35,11 +40,12 @@ flowchart LR
 
 ### 1. Agregá tu proyecto
 
-Cloná un único repositorio destino dentro de [`workspace/`](workspace/):
+Cloná uno o más repositorios destino dentro de [`workspace/`](workspace/) y registrá cada uno:
 
 ```text
 workspace/
-└── tu-proyecto/    # el único hijo directo con .git
+├── proyecto-a/
+└── proyecto-b/
 ```
 
 No necesitás preparar N clones ni ramas. Legion crea worktrees cuando hacen falta. Se recomienda partir de una base commiteada porque los worktrees nacen del commit de la rama base; si hay cambios locales que podrían quedar afuera, Legion avisa antes de continuar.
@@ -53,7 +59,7 @@ Empezá desde lo que ya tengas:
 /new-story SHOP-142: Permitir reintentar un pago fallido
 ```
 
-`/new-objective` divide un resultado de negocio en historias entregables de forma independiente. `/new-story` contrasta un pedido puntual con el código real, detecta decisiones faltantes y escribe el resultado confirmado en [`requirements-to-work.md`](requirements-to-work.md).
+`/new-objective` divide un resultado de negocio en historias entregables de forma independiente. `/new-story` contrasta un pedido puntual con el código real, detecta decisiones faltantes y escribe el resultado confirmado en [`requirements/<project>.md`](requirements/<project>.md).
 
 ¿Ya tenés backlog? Pegá las historias directamente en ese archivo usando bloques `# Story <ID>` separados por `---`.
 
@@ -64,16 +70,16 @@ Empezá desde lo que ya tengas:
 /legion
 ```
 
-Usá `dry-run` cuando el alcance sea grande, ambiguo o transversal. Legion guarda diseños revisables en `.orchestrator/designs/` antes de implementar. Ejecutá `/legion` directamente cuando las historias ya estén bien definidas.
+Usá `dry-run` cuando el alcance sea grande, ambiguo o transversal. Legion guarda diseños revisables en `.orchestrator/projects/<project>/designs/` antes de implementar. Ejecutá `/legion` directamente cuando las historias ya estén bien definidas.
 
-En la primera ejecución, Legion inspecciona el proyecto y pregunta solamente lo que no puede inferir: por ejemplo, la rama base, los comandos de verificación, las migraciones y la concurrencia. Guarda las respuestas en `.orchestrator/config.md`.
+Al registrar un proyecto, Legion pregunta los campos de catálogo que no puede inferir, como rama base, prefijo y concurrencia. La verificación y las migraciones se derivan del repo real y se revalidan al usarlas.
 
 ### 4. Cosechá el trabajo revisado
 
 Cada historia aprobada queda sin commitear en su propia carpeta:
 
 ```bash
-cd workspace/worktrees/<Story-ID>
+cd workspace/worktrees/<project>--<Story-ID>
 git status
 # revisá, commiteá, pusheá y abrí un PR cuando estés conforme
 ```
@@ -83,7 +89,7 @@ Legion no commitea, pushea ni crea PRs. No borres un worktree antes de commitear
 ## Qué resuelve una ejecución
 
 1. **Valida el workspace** y actualiza su visión de la rama base remota.
-2. **Mapea impacto y dependencias** de todas las historias y muestra el plan de batches.
+2. **Mapea impacto y dependencias** y muestra una vista de batches; cada reserva se revalida individualmente.
 3. **Elige el agente adecuado:** generalista o especialista en frontend, seguridad, datos o documentación.
 4. **Crea un worktree por historia activa** y mantiene a cada agente dentro de su alcance.
 5. **Evalúa el diseño** antes de escribir código; `dry-run` permite revisarlo y corregirlo primero.
@@ -92,7 +98,7 @@ Legion no commitea, pushea ni crea PRs. No borres un worktree antes de commitear
 8. **Rota la cola** cuando se libera capacidad, respetando conflictos de código y dependencias explícitas.
 9. **Comprueba el resultado combinado** con controles de consistencia y un trial merge antes de cerrar.
 
-El límite de concurrencia predeterminado es de tres implementaciones activas (`MAX_PARALLEL=3`). Es un techo, no una cuota: Legion usa menos si no hay suficientes historias que puedan ejecutarse juntas de forma segura. La cantidad de historias en cola no tiene límite.
+Cada proyecto tiene su propio techo `max_parallel`. Los claims se cuentan bajo el mutex breve del proyecto, por lo que dos sesiones no pueden tomar a la vez el último lugar disponible. La cantidad de historias en cola no tiene límite.
 
 ## Elegí el comando correcto
 
@@ -107,7 +113,7 @@ El límite de concurrencia predeterminado es de tres implementaciones activas (`
 | Una capacidad externa para Legion | `/new-module <repo-o-ruta>` | Un módulo instalado después de revisar permisos y riesgos |
 | Un módulo generador ya instalado | `/run-module <nombre>` | Un artefacto regenerable fuera del ciclo de historias |
 
-Los comandos aceptan argumentos opcionales en la misma línea; si los invocás solos, los asistentes te guían. La conversación sigue tu idioma. El contenido persistido usa `content_language` de `.orchestrator/config.md`. Los comandos y formatos de archivo permanecen en inglés.
+Los comandos aceptan argumentos opcionales; si los invocás solos, los asistentes te guían. La prosa persistida sigue el idioma establecido por el repo destino; los tags estructurales permanecen en inglés.
 
 ## Escribir historias manualmente
 
@@ -140,9 +146,9 @@ Empezá por estos tres artefactos:
 
 | Necesidad | Abrí |
 |---|---|
-| Historia, rama, batch, estado y ronda de revisión actuales | [`.orchestrator/assignments.md`](.orchestrator/assignments.md) |
-| Diseño aprobado o pendiente de una historia | `.orchestrator/designs/<Story-ID>.md` |
-| Informe de revisión independiente | `.orchestrator/reviews/<Story-ID>-code-review-Rn.md` |
+| Historia, rama, batch, estado y ronda de revisión actuales | [`.orchestrator/projects/<project>/assignments.md`](.orchestrator/projects/<project>/assignments.md) |
+| Diseño aprobado o pendiente de una historia | `.orchestrator/projects/<project>/designs/<Story-ID>.md` |
+| Informe de revisión independiente | `.orchestrator/projects/<project>/reviews/<Story-ID>-code-review-Rn.md` |
 
 El resto es memoria durable del sistema: eventos, decisiones, componentes reutilizables, señales, lecciones aprendidas, métricas y reputación de agentes. Consultá [`.orchestrator/README.md`](.orchestrator/README.md) solo cuando necesites la referencia completa de artefactos.
 
@@ -163,7 +169,7 @@ Consultá [`modules/README.md`](modules/README.md) para conocer el ciclo de vida
 - El orquestador coordina; no edita los worktrees de las historias.
 - Cada implementador escribe solo en su worktree asignado. Los especialistas de documentación y datos tienen excepciones de salida acotadas y documentadas.
 - Ninguna historia se cierra sin una revisión independiente con resultado `APPROVED`.
-- Los comandos y supuestos específicos del proyecto deben provenir del repositorio o de `.orchestrator/config.md`.
+- Los comandos y supuestos específicos del proyecto deben provenir del repositorio o de `.orchestrator/projects.yml`.
 - Legion nunca commitea, pushea, crea PRs ni amplía silenciosamente los permisos declarados por un módulo.
 - Los manifiestos vuelven auditables las capacidades, pero no reemplazan un sandbox del sistema operativo; el acceso a comandos tiene el alcance del proceso host.
 
@@ -173,17 +179,17 @@ El protocolo completo de orquestación está en [`CLAUDE.md`](CLAUDE.md). Las re
 
 ```text
 legion/
-├── requirements-to-work.md       # objetivos e historias
+├── requirements/<project>.md       # objetivos e historias
 ├── workspace/
-│   ├── <base-repo>/              # un único clone del proyecto destino
-│   └── worktrees/<Story-ID>/     # entrega aislada por historia
+│   ├── <repo_dir>/                       # un clone por proyecto registrado
+│   └── worktrees/<project>--<Story-ID>/  # entrega aislada por historia
 ├── .claude/
 │   ├── agents/                   # implementadores, especialistas y revisores
 │   └── skills/                   # comandos y guías reutilizables
 ├── .orchestrator/                # configuración, planes, estado y auditoría
 ├── modules/                      # módulos instalados, registro, reportes y salidas
-├── docs/<base-repo>/             # documentación generada, cuando se solicita
-└── scripts/<base-repo>/          # scripts auxiliares de datos, cuando se solicitan
+├── docs/<project>/             # documentación generada, cuando se solicita
+└── scripts/<project>/          # scripts auxiliares de datos, cuando se solicitan
 ```
 
 ## Licencia

@@ -8,6 +8,13 @@
 /modules/output/*
 !/modules/output/.gitkeep
 
+# Ephemeral multi-project coordination. Never commit owners or candidates.
+.orchestrator/runtime/
+/requirements/*.candidate-*
+/.orchestrator/projects.yml.candidate-*
+/.orchestrator/projects/**/*.candidate-*
+/modules/registry.md.candidate-*
+
 # Local Claude Code permissions config (contains paths/approvals for this machine).
 .claude/settings.local.json
 

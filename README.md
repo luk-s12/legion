@@ -1,4 +1,9 @@
 <p align="center">
+
+> Legion is multi-project by default. Register/select a project from
+> `.orchestrator/projects.yml`; project requirements and orchestration memory are namespaced.
+> Multiple Claude Code sessions may own different story claims in the same project. A batch is a
+> planning view, not a synchronization barrier.
   <img src="assets/legion-wordmark.png" alt="LEGION" width="360">
 </p>
 
@@ -35,11 +40,12 @@ flowchart LR
 
 ### 1. Add your project
 
-Clone one destination repository inside [`workspace/`](workspace/):
+Clone one or more destination repositories inside [`workspace/`](workspace/) and register each one:
 
 ```text
 workspace/
-└── your-project/    # the only direct child with .git
+├── project-a/
+└── project-b/
 ```
 
 You do not need to prepare N clones or branches. Legion creates worktrees on demand. A committed baseline is recommended because worktrees start from the base branch's commit; if local changes could be left behind, Legion warns before proceeding.
@@ -53,7 +59,7 @@ Start from whichever input you already have:
 /new-story SHOP-142: Let customers retry a failed payment
 ```
 
-`/new-objective` breaks a business goal into independently deliverable stories. `/new-story` checks one request against the real code, surfaces missing decisions, and writes the confirmed result to [`requirements-to-work.md`](requirements-to-work.md).
+`/new-objective` breaks a business goal into independently deliverable stories. `/new-story` checks one request against the real code, surfaces missing decisions, and writes the confirmed result to [`requirements/<project>.md`](requirements/<project>.md).
 
 Already have a backlog? Paste stories directly into that file using `# Story <ID>` blocks separated by `---`.
 
@@ -64,16 +70,16 @@ Already have a backlog? Paste stories directly into that file using `# Story <ID
 /legion
 ```
 
-Use `dry-run` when scope is large, ambiguous, or cross-cutting. Legion persists reviewable designs in `.orchestrator/designs/` before implementation. Run `/legion` directly when the stories are already well specified.
+Use `dry-run` when scope is large, ambiguous, or cross-cutting. Legion persists reviewable designs in `.orchestrator/projects/<project>/designs/` before implementation. Run `/legion` directly when the stories are already well specified.
 
-On the first run, Legion inspects the project and asks only for details it cannot infer—such as the base branch, verification commands, migration tooling, and concurrency. It saves the answers in `.orchestrator/config.md`.
+On registration, Legion inspects the project and asks for the catalog fields it cannot infer, such as base branch, branch prefix and concurrency. Verification and migration facts come from the real repo and are revalidated when used.
 
 ### 4. Harvest reviewed work
 
 Each approved story remains uncommitted in its own folder:
 
 ```bash
-cd workspace/worktrees/<Story-ID>
+cd workspace/worktrees/<project>--<Story-ID>
 git status
 # inspect, commit, push, and open a PR when satisfied
 ```
@@ -83,7 +89,7 @@ Legion does not commit, push, or create PRs. Do not remove a worktree before com
 ## What a run does for you
 
 1. **Validates the workspace** and updates its view of the remote base branch.
-2. **Maps impact and dependencies** across every story, then shows the batch plan.
+2. **Maps impact and dependencies** and shows a batch planning view; every reservation is revalidated individually.
 3. **Selects the right agent**—generalist or a focused frontend, security, data, or docs specialist.
 4. **Creates one worktree per active story** and keeps each agent inside its assigned scope.
 5. **Gates the design** before code is written; `dry-run` lets you inspect and amend it first.
@@ -92,7 +98,7 @@ Legion does not commit, push, or create PRs. Do not remove a worktree before com
 8. **Rotates the queue** as capacity becomes available, honoring code conflicts and explicit dependencies.
 9. **Checks the combined result** with final consistency checks and a trial merge before closing.
 
-The default concurrency ceiling is three active implementations (`MAX_PARALLEL=3`). It is a ceiling, not a quota: Legion runs fewer when fewer stories are safe to execute together. The number of queued stories is not limited.
+Each project has its own `max_parallel` ceiling. Story claims are counted while holding that project's brief mutex, so multiple Claude sessions cannot both take the last capacity place. The number of queued stories is not limited.
 
 ## Choose the right command
 
@@ -107,7 +113,7 @@ The default concurrency ceiling is three active implementations (`MAX_PARALLEL=3
 | An external Legion capability | `/new-module <repo-or-path>` | An installed module after permission and risk review |
 | An installed generator module | `/run-module <name>` | A regenerable artifact outside the story cycle |
 
-Commands accept optional inline arguments; invoked bare, the assistants guide you interactively. Conversation follows your language. Persisted content follows `content_language` in `.orchestrator/config.md`. Command names and file formats remain in English.
+Commands accept optional inline arguments; invoked bare, the assistants guide you interactively. Conversation follows your language. Persisted prose follows the destination repo's established language; structural tags remain in English.
 
 ## Write stories manually
 
@@ -140,9 +146,9 @@ Start with these three artifacts:
 
 | Need | Open |
 |---|---|
-| Current story, branch, batch, status, and review round | [`.orchestrator/assignments.md`](.orchestrator/assignments.md) |
-| A story's approved or pending design | `.orchestrator/designs/<Story-ID>.md` |
-| An independent review report | `.orchestrator/reviews/<Story-ID>-code-review-Rn.md` |
+| Current story, branch, batch, status, and review round | [`.orchestrator/projects/<project>/assignments.md`](.orchestrator/projects/<project>/assignments.md) |
+| A story's approved or pending design | `.orchestrator/projects/<project>/designs/<Story-ID>.md` |
+| An independent review report | `.orchestrator/projects/<project>/reviews/<Story-ID>-code-review-Rn.md` |
 
 The rest is durable system memory: events, decisions, reusable components, signals, lessons learned, metrics, and agent reputation. See [`.orchestrator/README.md`](.orchestrator/README.md) only when you need the complete artifact reference.
 
@@ -163,7 +169,7 @@ See [`modules/README.md`](modules/README.md) for lifecycle details and [Legion M
 - The orchestrator coordinates; it does not edit story worktrees.
 - An implementing agent writes only in its assigned worktree. Document and data specialists have narrowly documented output exceptions.
 - No story closes without an independent `APPROVED` review.
-- Project-specific commands and assumptions must come from the repository or `.orchestrator/config.md`.
+- Project-specific commands and assumptions must come from the repository or `.orchestrator/projects.yml`.
 - Legion never silently commits, pushes, opens a PR, or broadens a module's declared permissions.
 - Module manifests make capabilities auditable but do not replace an operating-system sandbox; command access has the reach of the host process.
 
@@ -173,17 +179,17 @@ For the complete orchestration protocol, see [`CLAUDE.md`](CLAUDE.md). For modul
 
 ```text
 legion/
-├── requirements-to-work.md       # objectives and stories
+├── requirements/<project>.md       # objectives and stories
 ├── workspace/
-│   ├── <base-repo>/              # one clone of the destination project
-│   └── worktrees/<Story-ID>/     # isolated delivery per story
+│   ├── <repo_dir>/                       # one clone per registered project
+│   └── worktrees/<project>--<Story-ID>/  # isolated delivery per story
 ├── .claude/
 │   ├── agents/                   # implementers, specialists, and reviewers
 │   └── skills/                   # user commands and reusable guidance
 ├── .orchestrator/                # configuration, plans, state, and audit trail
 ├── modules/                      # installed modules, registry, reports, outputs
-├── docs/<base-repo>/             # generated documentation, when requested
-└── scripts/<base-repo>/          # auxiliary data scripts, when requested
+├── docs/<project>/             # generated documentation, when requested
+└── scripts/<project>/          # auxiliary data scripts, when requested
 ```
 
 ## License
