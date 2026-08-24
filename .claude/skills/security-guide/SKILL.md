@@ -2,10 +2,23 @@
 name: security-guide
 description: Security audit guide, agnostic of language and framework, based on the OWASP Top 10. worktree-agent-security MUST apply it when auditing, classifying each finding by severity and citing concrete evidence before declaring it blocking - so that the lack of context of a narrow audit doesn't stall a User Story for no real reason.
 ---
+## Mandatory project scope
+
+Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
+The selected catalog entry is the sole configuration authority. Use only
+`requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
+namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
+registration. Neither state permits old singleton paths.
+
+For a project-shared write, acquire the brief project mutex, reread current state, write and validate
+a sibling candidate, rename it to the known destination, reread, then release the owned mutex.
+Do not hold a mutex while interviewing, researching, testing, reviewing or waiting. Catalog and global `modules/registry.md` writes instead use the brief global metadata mutex. Never acquire or release a story claim unless this skill
+is `/legion` performing a reservation.
+
 
 Mandatory audit guide for `worktree-agent-security` (and for any `[security]` subtask within a mixed story). It complements (never contradicts) `CLAUDE.md`/the base repo's own rules — in case of conflict, the target project's rules win.
 
-This guide **does not assume any particular language or framework**: the OWASP Top 10 categories and this guide's criteria apply to any stack. If the project uses a framework with known security quirks (e.g. mass assignment in some ORMs, `dangerouslySetInnerHTML` in React), add them as `## Project-specific notes` in `.orchestrator/config.md` instead of bloating this file — same criterion `patterns-and-smells` uses with its `references/`.
+This guide **does not assume any particular language or framework**: the OWASP Top 10 categories and this guide's criteria apply to any stack. Project-specific framework quirks come from the destination repo's real rules and resolved verification facts, not from a second Legion configuration file.
 
 ## Part 1 — Categories to audit (OWASP Top 10, stack-agnostic)
 
@@ -30,14 +43,14 @@ For every file touched or indicated by the story, check against these categories
 
 **Hard rule**: never declare something blocking just because "it matches a Part 1 pattern". If you can't cite the concrete evidence of exploitability in the code in front of you, it's a warning, not blocking — the lack of context from a narrow audit is not a reason to stall an entire story. When in doubt, warning.
 
-**Always excluded from blocking** (low impact or known noise, unless the project says otherwise in `config.md`): denial of service, rate limiting, memory/CPU exhaustion, "missing validation" with no demonstrated impact, open redirect.
+**Always excluded from blocking** (low impact or known noise, unless resolved project rules say otherwise): denial of service, rate limiting, memory/CPU exhaustion, "missing validation" with no demonstrated impact, open redirect.
 
 ## Part 3 — Application protocol
 
-1. **Before auditing**: check whether `.orchestrator/config.md` has `## Project-specific notes` for security — framework/stack quirks to take into account.
+1. **Before auditing**: check the destination repo's real rules and resolved verification facts for framework/stack security quirks.
 2. **While auditing**: go through Part 1 on the files in the indicated zone. For each finding, classify it with Part 2 and note the evidence (file/line + exploitability, or the reason it stays a warning).
 3. **When reporting `FINALIZED`**: list blocking findings and warnings separately (with evidence). If there are blockers, the story **is not ready** — the Orchestrator decides how to resolve it (order a narrow fix, escalate to the implementer if it exceeds your scope, or bring it to the user if there's no way to unblock it in a few rounds). You never decide on your own that the story stays blocked indefinitely — you report, the Orchestrator resolves.
 
 ## Use by the Orchestrator
 
-A `blocking` finding is never resolved silently: the Orchestrator reads it, and if the fix is clear, orders it via `SendMessage` (documented in `.orchestrator/decisions/DEC-NNN.md`, same as any routine correction); if after 3 rounds it's still unresolved, or it implies a business decision the Orchestrator can't make on its own (e.g. deliberately accepting a risk), it's escalated to the user — same limit already used with `worktree-reviewer`.
+A `blocking` finding is never resolved silently: the Orchestrator reads it, and if the fix is clear, orders it via `SendMessage` (documented in `.orchestrator/projects/<project>/decisions/DEC-NNN.md`, same as any routine correction); if after 3 rounds it's still unresolved, or it implies a business decision the Orchestrator can't make on its own (e.g. deliberately accepting a risk), it's escalated to the user — same limit already used with `worktree-reviewer`.

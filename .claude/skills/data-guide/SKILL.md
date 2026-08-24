@@ -2,8 +2,21 @@
 name: data-guide
 description: Data modeling and safe-migrations guide, agnostic of engine (relational and non-relational). worktree-agent-data MUST apply it when designing/implementing, classifying each finding by severity and citing concrete evidence before declaring it blocking - same criterion as security-guide, so that a schema change doesn't break already-deployed code or existing data.
 ---
+## Mandatory project scope
 
-Mandatory modeling and migrations guide for `worktree-agent-data` (and for any `[data]` subtask within a mixed story). It complements (never contradicts) `CLAUDE.md`/the base repo's own rules and the migration convention registered in `.orchestrator/config.md` — in case of conflict, the target project's rules win.
+Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
+The selected catalog entry is the sole configuration authority. Use only
+`requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
+namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
+registration. Neither state permits old singleton paths.
+
+For a project-shared write, acquire the brief project mutex, reread current state, write and validate
+a sibling candidate, rename it to the known destination, reread, then release the owned mutex.
+Do not hold a mutex while interviewing, researching, testing, reviewing or waiting. Catalog and global `modules/registry.md` writes instead use the brief global metadata mutex. Never acquire or release a story claim unless this skill
+is `/legion` performing a reservation.
+
+
+Mandatory modeling and migrations guide for `worktree-agent-data` (and for any `[data]` subtask within a mixed story). It complements the destination repo's rules and migration convention found in resolved verification facts; the target project's real rules win.
 
 This guide **does not assume any particular engine**: the criteria apply equally to relational (tables) and non-relational (collections/documents) — where the criterion differs between the two worlds, it's explicitly clarified in the item.
 
@@ -45,4 +58,4 @@ The problem this part solves: a migration that looks fine in the worktree can br
 
 ## Use by the Orchestrator
 
-A `blocking` finding is never resolved silently: it's read, and if the fix is clear it's ordered via `SendMessage` (documented in `.orchestrator/decisions/DEC-NNN.md`); if after 3 rounds it's still unresolved, or it implies a business decision the Orchestrator can't make on its own (e.g. accepting the application of a destructive migration with no rollback because the data no longer matters), it's escalated to the user — same limit as `security-guide` and `worktree-reviewer`.
+A `blocking` finding is never resolved silently: it's read, and if the fix is clear it's ordered via `SendMessage` (documented in `.orchestrator/projects/<project>/decisions/DEC-NNN.md`); if after 3 rounds it's still unresolved, or it implies a business decision the Orchestrator can't make on its own (e.g. accepting the application of a destructive migration with no rollback because the data no longer matters), it's escalated to the user — same limit as `security-guide` and `worktree-reviewer`.

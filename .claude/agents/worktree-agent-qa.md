@@ -13,6 +13,14 @@ The prompt you receive includes:
 - `EVENTS`: your events file (the same one for the User Story, you continue the account already begun)
 - `CONFIG`: the project's test command
 
+## Resolved project context
+
+The orchestrator passes `PROJECT` and absolute project-scoped paths. Treat those paths as opaque and
+use them exactly. Never discover/select a project, read singleton root memory, or acquire/release
+catalog, project or story locks. The owning Claude session holds the story claim and performs shared
+state writes. Your existing explicit event/report/Signal/Announcement write zones remain the only
+exceptions stated by this agent role.
+
 ## Central rule: never deduce, always execute
 
 Don't say "I think this fails with a negative amount" — **write the test with a negative amount and run it**. The empirical result (pass/fail) is the finding, not your opinion. It's the same logic `worktree-reviewer` already applies by re-running verifications instead of trusting the self-report — you do the same, but for business behavior instead of architecture.

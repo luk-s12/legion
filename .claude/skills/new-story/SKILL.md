@@ -1,9 +1,38 @@
 ---
 name: new-story
-description: Assistant for creating a User Story in requirements-to-work.md. Asks for the ID and description, analyzes the description against the base repo's real code, challenges ambiguities and possible bugs with questions to the user, and only then writes the refined User Story to the file — through a semantic preview checkpoint and a final-text checkpoint, keeping a persistent working record per story.
+description: Assistant for creating a User Story in requirements/<project>.md. Asks for the ID and description, analyzes the description against the base repo's real code, challenges ambiguities and possible bugs with questions to the user, and only then writes the refined User Story to the file — through a semantic preview checkpoint and a final-text checkpoint, keeping a persistent working record per story.
 ---
+## Mandatory /new-story project and publication rules
 
-Guide the user to add a well-specified User Story to `requirements-to-work.md`. Your value is not transcribing: it's **detecting gaps in the description BEFORE an agent discovers them mid-implementation**. A question now saves a gate round or a bug later.
+Always ask the user to select/confirm the project before ID discovery or repo analysis, even when a
+flag preselected it. The semantic preview lives only at
+`.orchestrator/projects/<project>/stories/<Story-ID>.md` and is not schedulable. After the exact
+final text is confirmed, acquire the project mutex, reread requirements/story record/assignments,
+revalidate the ID, publish requirements and the final story record through verified candidates,
+rebuild the queued board row, reread destinations and release. Creating a story never creates its
+writer claim.
+
+## Prose language
+
+Resolve `prose_language` once for this command: an explicit user choice wins; otherwise use the
+destination repo's established prose language; if none is evident, use English. Keep structural tags
+in English regardless.
+
+## Mandatory project scope
+
+Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
+The selected catalog entry is the sole configuration authority. Use only
+`requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
+namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
+registration. Neither state permits old singleton paths.
+
+For a project-shared write, acquire the brief project mutex, reread current state, write and validate
+a sibling candidate, rename it to the known destination, reread, then release the owned mutex.
+Do not hold a mutex while interviewing, researching, testing, reviewing or waiting. Catalog and global `modules/registry.md` writes instead use the brief global metadata mutex. Never acquire or release a story claim unless this skill
+is `/legion` performing a reservation.
+
+
+Guide the user to add a well-specified User Story to `requirements/<project>.md`. Your value is not transcribing: it's **detecting gaps in the description BEFORE an agent discovers them mid-implementation**. A question now saves a gate round or a bug later.
 
 If what the user brings is a high-level objective where they don't yet know how many User Stories it implies (not a concrete story), suggest `/new-objective` instead of this command — it does the same work as this skill, but first helps split the objective into several User Stories.
 
@@ -11,27 +40,27 @@ If what the user brings is a high-level objective where they don't yet know how 
 
 Take the Story ID and description from the args if the command was invoked with them already (e.g. `/new-story PROJ-100: <description>` or just a free-form description you can extract an implied ID from). **If invoked with no arguments at all, ask for them one field at a time, in two separate turns — never bundle both questions into a single message.**
 
-### Prepare `.orchestrator/stories/`
+### Prepare `.orchestrator/projects/<project>/stories/`
 
-Before scanning anything: if `.orchestrator/stories/` already exists as a directory, continue without touching its contents; if it's missing, create it; if that path exists as something other than a directory, stop and report it. Creating the directory never authorizes overwriting a file inside it — this preparation is idempotent, running the command again must not alter any existing story's content, permissions, or timestamps.
+Before scanning anything: if `.orchestrator/projects/<project>/stories/` already exists as a directory, continue without touching its contents; if it's missing, create it; if that path exists as something other than a directory, stop and report it. Creating the directory never authorizes overwriting a file inside it — this preparation is idempotent, running the command again must not alter any existing story's content, permissions, or timestamps.
 
 ### Resolve occupied IDs
 
 An ID counts as occupied if it appears in any of these sources:
 
-1. a real `# Story <ID>` block in `requirements-to-work.md` (ignore "(Replace with...)" placeholders — they don't count);
-2. a filename `.orchestrator/stories/<ID>.md`;
+1. a real `# Story <ID>` block in `requirements/<project>.md` (ignore "(Replace with...)" placeholders — they don't count);
+2. a filename `.orchestrator/projects/<project>/stories/<ID>.md`;
 3. the header declared *inside* that file (`# Preview — <ID>` or `# Story <ID>`) — if it doesn't match the filename, the file is invalid, not a free ID (see `INVALID_FILE` below).
 
-When checking a specific ID against `requirements-to-work.md`, don't do a boolean search — walk the file's `---`-separated blocks and, for the ones matching that ID, keep: how many times it appears, each match's ordinal position among the blocks, how many `# Story` headers appear inside each matching block, and the block's content.
+When checking a specific ID against `requirements/<project>.md`, don't do a boolean search — walk the file's `---`-separated blocks and, for the ones matching that ID, keep: how many times it appears, each match's ordinal position among the blocks, how many `# Story` headers appear inside each matching block, and the block's content.
 
-- **Zero occurrences in the queue**: evaluate the ID against `.orchestrator/stories/<ID>.md` instead (see state table below).
+- **Zero occurrences in the queue**: evaluate the ID against `.orchestrator/projects/<project>/stories/<ID>.md` instead (see state table below).
 - **Exactly one valid occurrence**: proceed to state classification below.
 - **More than one occurrence, or a block with a missing/duplicated `# Story` header**: stop for that specific ID, report the positions found in the queue, and ask the user to reconcile it by hand before continuing — never silently pick one copy or one interpretation.
 
 ### Classify state and act accordingly
 
-| State | `.orchestrator/stories/<ID>.md` | `requirements-to-work.md` | What to do |
+| State | `.orchestrator/projects/<project>/stories/<ID>.md` | `requirements/<project>.md` | What to do |
 |---|---|---|---|
 | `NEW` | Absent | Absent | Nothing to resume — this is a genuinely new ID. Proceed with the ID-picking flow below, then go to Step 2. |
 | `PREVIEW_DRAFT` | Starts with `# Preview — <ID>`, well-formed | Absent | Resume Checkpoint A (Step 4) on the existing file — don't regenerate the preview from scratch. |
@@ -40,31 +69,31 @@ When checking a specific ID against `requirements-to-work.md`, don't do a boolea
 | `PERSISTED_DRIFT` | Story final, valid | Same ID, different content | Stop. Report both versions and ask the user to reconcile manually — neither source wins automatically. |
 | `PREVIEW_WITH_QUEUE` | Starts with `# Preview — <ID>` | A block with that ID exists in the queue | Inconsistent state (a preview should never coexist with an already-persisted ID). Stop and report it; don't transform the preview or touch the queue. |
 | `INVALID_FILE` | Header missing/duplicated, internal ID ≠ filename, or contract incomplete | Any | Preserve the file untouched, report the concrete problem, and let the user either fix it or pick a different ID. Never overwrite it automatically. |
-| `QUEUE_ONLY` | Absent | A single valid block with that ID | Offer to create the matching `.orchestrator/stories/<ID>.md` record from that exact block, or pick a different ID. |
+| `QUEUE_ONLY` | Absent | A single valid block with that ID | Offer to create the matching `.orchestrator/projects/<project>/stories/<ID>.md` record from that exact block, or pick a different ID. |
 
 **No silent overwrite, in any state**: an occupied ID never gets its file replaced just because the user is running `/new-story` again. Every non-`NEW` state above has an explicit, non-destructive action.
 
 ### Picking a new ID (state `NEW`, or the user wants a different one)
 
 1. Resolve the **Story ID** with `AskUserQuestion` (never leave it as a bare open question — that call needs 2-4 concrete options, or it fails):
-   - Scan `requirements-to-work.md` for existing `# Story <ID>` IDs (ignoring placeholders, per above).
+   - Scan `requirements/<project>.md` for existing `# Story <ID>` IDs (ignoring placeholders, per above).
    - **If a single shared prefix is detected** (every real story ID splits into the same `PREFIX-NUMBER` shape, e.g. all of them start with `SO-`): compute the next available number in that sequence and offer it as the first, recommended option worded so the user only has to supply the number (e.g. "Use `SO-` + your number (e.g. `SO-23`) — next available: `SO-23`"). The user types just the number; concatenate it to the detected prefix yourself. Add a second option to use a different prefix instead, for the rare case this story doesn't belong to that sequence.
    - **If there's no real story yet, or the existing ones don't share a single prefix** (mixed conventions): fall back to inferring the most likely next full ID and offer it as the recommended option (e.g. "Use `OS-2` (next available)"), plus a second option such as "Use a different prefix."
    - The user can always pick "Other" to type a fully custom ID — that's the built-in escape hatch for anything the two options don't cover.
    - Validate whatever ID results: format `PREFIX-NUMBER` (or whatever the project uses — ask again if it doesn't comply), and re-run the occupied-ID check above against it. If it's occupied, go to the matching state instead of silently proceeding.
 2. Only once the ID is settled, ask in plain conversational text for the **Description**: what needs to be done, in the user's own words. This one stays plain text — it's a free-form paragraph, not a set of short choices, so `AskUserQuestion` doesn't fit it (save that tool for the real clarifying questions in Step 3).
 
-Before continuing, count the file's real User Stories (`# Story` blocks with content, ignoring placeholders). **There is no limit on the number of User Stories**: this system uses a single base repo + one `git worktree` per story, so adding one more story doesn't break anything — at most it makes `/legion` group it into a later batch if it overlaps with another (the real limit is concurrency, `MAX_PARALLEL`, not quantity).
+Before continuing, count the file's real User Stories (`# Story` blocks with content, ignoring placeholders). **There is no limit on the number of User Stories**: each selected project uses one repo clone + one Git worktree per story. Adding a story only leaves it queued when overlap, dependencies or project `max_parallel` prevent reservation.
 
 ## Step 2 — Analysis against the real code
 
-Use the **base repo** (the single subdirectory with `.git` inside `workspace/`, aside from `worktrees/`) as reference — that's where the project's real code lives, with no active worktree yet. If `workspace/` is empty, warn that the repo needs to be cloned there first before anything can be analyzed. Investigate the code the story is going to touch — not superficially: read the actual files.
+Use the selected project's resolved `workspace/<repo_dir>` as reference. If that cataloged repo is missing or invalid, stop only this project and guide repair; never guess another repo. Investigate the actual code the story will touch.
 
 **Exhaustive research, not just targeted** (this is what prevents an implicit business rule from being discovered only in production, after it's implemented):
 
 - **Broad grep by entity/field, not just the obvious files**: if the story mentions `order.status` or an equivalent concept, search the **entire** repo for that term — don't assume only the service/controller the story's name suggests matters. An implicit rule often lives in a module that at first glance has nothing to do with it (an event listener, a scheduled job, another flow that reacts to the same data).
 - **Read the existing tests for the zone found** as a source of real behavior, not just production code — an old test often documents a rule nobody remembers anywhere else.
-- **Check `.orchestrator/lessons-learned.md` and `.orchestrator/decisions/`**, filtering for what relates to the story's zone: if a previous incident or an architectural decision already touched this same part of the code, that's direct evidence to take into account, not a hunch.
+- **Check `.orchestrator/projects/<project>/lessons-learned.md` and `.orchestrator/projects/<project>/decisions/`**, filtering for what relates to the story's zone: if a previous incident or an architectural decision already touched this same part of the code, that's direct evidence to take into account, not a hunch.
 - **Map the impact zone**: what modules/services, public endpoints/interfaces, entities/tables, enums, consumers/producers or equivalents does it touch? Use the project's real structure (read its `CLAUDE.md`/architecture docs if they exist) instead of assuming layers from another project.
 - **Cross-check every claim in the description against what exists**:
   - Do the concepts it names correspond to real domain entities/objects? With what names and states?
@@ -90,16 +119,16 @@ Explicitly flag **possible bugs**: if the description, applied as-is on top of t
 
 ## Step 4 — Two-level draft, checkpoints, and persistence
 
-Everything in this step happens on a single working file, `.orchestrator/stories/<Story-ID>.md`, created (or resumed) in Step 1. It goes through two levels: first a short semantic preview the user validates for scope and decisions (Level 1), then the full final story that gets persisted verbatim (Level 2). **The file is never deleted** — once persisted it stays as the story's permanent record, so the story survives even if `requirements-to-work.md` is later reset.
+Everything in this step happens on a single working file, `.orchestrator/projects/<project>/stories/<Story-ID>.md`, created (or resumed) in Step 1. It goes through two levels: first a short semantic preview the user validates for scope and decisions (Level 1), then the full final story that gets persisted verbatim (Level 2). **The file is never deleted** — once persisted it stays as the story's permanent record, so the story survives even if `requirements/<project>.md` is later reset.
 
-Write all persisted **prose** (paragraphs, bullets, editorial headers) in whatever `.orchestrator/config.md`'s `content_language` field says (default English) — regardless of what language you and the user chatted in to get here. The **structural tags never translate**, always exactly as shown below, in English: `# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Modules`, `## Subtasks`. `/legion` parses those literally (e.g. to build the dependency graph from `## Depends on`), so translating them would silently break scheduling.
+Write persisted prose in the language established by the destination repo, defaulting to English when none is evident. The **structural tags never translate**, always exactly as shown below, in English: `# Story <ID>`, `## Acceptance criteria`, `## Definitions taken`, `## Estimated impact zone`, `## Depends on`, `## Modules`, `## Subtasks`.
 
 ### Structural contract (unchanged, always literal)
 
 - `# Story <ID>` never carries a title or suffix on the same line; an optional human title goes on the next line as a blockquote.
 - `## Acceptance criteria`, `## Definitions taken`, and `## Estimated impact zone` are mandatory base sections. `## Depends on`, `## Modules`, `## Subtasks` are optional and are **omitted entirely** when they don't apply — never leave an empty section or a placeholder bullet like "- None."
 - Subgroups inside a contractual section use `###` or lower.
-- **No line in the final block may be a standalone `---`, not even inside a fenced code block.** `/legion` cuts `requirements-to-work.md` into stories by splitting on `---`, and nothing in that mechanism is documented as fence-aware — a literal `---` anywhere in the persisted text risks corrupting the queue's block boundaries. If a story genuinely needs to show something that would normally use a bare `---` (e.g. a YAML frontmatter example), describe it in prose or write the dashes spaced out (`- - -`) instead of reproducing it literally.
+- **No line in the final block may be a standalone `---`, not even inside a fenced code block.** `/legion` cuts `requirements/<project>.md` into stories by splitting on `---`, and nothing in that mechanism is documented as fence-aware — a literal `---` anywhere in the persisted text risks corrupting the queue's block boundaries. If a story genuinely needs to show something that would normally use a bare `---` (e.g. a YAML frontmatter example), describe it in prose or write the dashes spaced out (`- - -`) instead of reproducing it literally.
 
 ### Level 1 — Semantic preview
 
@@ -167,20 +196,20 @@ Once A is confirmed, replace the same file's content entirely. Structure:
 
 > <optional human title>
 
-## <Expected outcome, in content_language>
+## <Expected outcome, in prose_language>
 <what problem it solves, for whom, and the observable change>
 
-## <Scope, in content_language>
+## <Scope, in prose_language>
 ### <Includes>
 - ...
 ### <Out of scope>
 - ...
 
-## <Contract and behavior, in content_language>
+## <Contract and behavior, in prose_language>
 ### <flow/mode>
 - ...
 
-## <Binding technical decisions, in content_language>
+## <Binding technical decisions, in prose_language>
 ### <decision name>
 - **Definition:** <short reference to the canonical formulation in Definitions taken>
 - **Reason:** ...
@@ -229,10 +258,10 @@ Orientative budgets: expected outcome 80-120 words across up to 3 short paragrap
 | Discarded alternative | Under its decision |
 | Current-state evidence | Preview; in the final story only if still necessary |
 | Excluded work | Out of scope |
-| Hypothesis / future check | The "to verify" category, localized per `content_language` (never presented as a guarantee) |
+| Hypothesis / future check | The "to verify" category, localized per `prose_language` (never presented as a guarantee) |
 | Affected zone | Estimated impact zone |
 
-The "to verify" and "guidance-only" categories are **content**, not structural tags — they must be written in whatever `content_language` says, the same as any other prose: `To verify` / `Guidance` in English, `Por verificar` / `Orientativo` in Spanish, the equivalent localized pair in any other configured language. Never hardcode the English words when `content_language` is something else.
+The "to verify" and "guidance-only" categories are **content**, not structural tags — they must be written in whatever `prose_language` says, the same as any other prose: `To verify` / `Guidance` in English, `Por verificar` / `Orientativo` in Spanish, the equivalent localized pair in any other configured language. Never hardcode the English words when `prose_language` is something else.
 
 Condensing prose can never drop edge cases, errors/responses, permissions, concurrency, idempotency, data/migrations, integrations, or tests found during Steps 2-3.
 
@@ -240,21 +269,21 @@ Condensing prose can never drop edge cases, errors/responses, permissions, concu
 
 On every loop, after any edit:
 
-1. reread `.orchestrator/stories/<ID>.md`;
+1. reread `.orchestrator/projects/<project>/stories/<ID>.md`;
 2. validate tags are exact, unique, and at the right level;
 3. validate there are no placeholders or empty base sections;
-4. validate `content_language` in prose/editorial headers;
+4. validate `prose_language` in prose/editorial headers;
 5. validate outcome appears before evidence;
 6. validate criteria are atomic;
 7. validate "out of scope" content never doubles as a task;
 8. validate values are unique and amendments are integrated (no contradicting leftovers);
-9. validate semantics by location and language: contract/AC/Definitions content is implicitly binding without needing a prefix word; out-of-scope content lives only in its own section; the "to verify" category is written literally, in `content_language`, next to any hypothesis/`explain()`/benchmark (`To verify` in English, `Por verificar` in Spanish, the equivalent in any other configured language — never hardcode the English word when `content_language` is something else); a guidance-only detail (e.g. a suggested class name) is flagged the same way, localized (`Guidance`/`Orientativo`/equivalent), only when it could genuinely be mistaken for binding contract;
+9. validate semantics by location and language: contract/AC/Definitions content is implicitly binding without needing a prefix word; out-of-scope content lives only in its own section; the "to verify" category is written literally, in `prose_language`, next to any hypothesis/`explain()`/benchmark (`To verify` in English, `Por verificar` in Spanish, the equivalent in any other configured language — never hardcode the English word when `prose_language` is something else); a guidance-only detail (e.g. a suggested class name) is flagged the same way, localized (`Guidance`/`Orientativo`/equivalent), only when it could genuinely be mistaken for binding contract;
 10. compare against the coverage matrix;
 11. validate `Definitions taken` is self-sufficient and not duplicated by the editorial section;
 12. validate the optional-rules sections below are complete for whichever ones apply;
 13. only if everything passes, offer Checkpoint B.
 
-Ask: **"This is the exact story that will be added to requirements-to-work.md. Do you confirm it?"** — options **"Yes, add it"** / **"I want to adjust the wording"**.
+Ask: **"This is the exact story that will be added to requirements/<project>.md. Do you confirm it?"** — options **"Yes, add it"** / **"I want to adjust the wording"**.
 
 Same in-memory-snapshot discipline as Checkpoint A: capture the exact content that passed the editorial pass and was shown to the user. After confirmation, reread immediately before persisting and repeat the validations — if the content differs from what was confirmed (even if still valid), go back to the loop and reconfirm; never persist a version different from the one actually confirmed. No durable hashing involved.
 
@@ -263,9 +292,9 @@ Same in-memory-snapshot discipline as Checkpoint A: capture the exact content th
 `## Depends on`, `## Modules`, and `## Subtasks` are **omitted completely** when they don't apply — never persisted empty or with a "no dependencies" bullet.
 
 **`## Depends on`**:
-- Only a business dependency: this story doesn't make sense before another is already `finalized`. Code overlap is not a dependency — the scheduler already serializes that into different batches.
+- Only a business dependency: this story doesn't make sense before another is already `finalized`. Code overlap is not a dependency — the scheduler already serializes that into different reservations.
 - Format: `- <ID of the other story>`.
-- Each ID must exist as a real story in `requirements-to-work.md` — a draft, a placeholder, or free text doesn't qualify.
+- Each ID must exist as a real story in `requirements/<project>.md` — a draft, a placeholder, or free text doesn't qualify.
 - If unsure whether it's a real dependency or just an ordering preference, ask in Step 3.
 
 **`## Modules`**:
@@ -297,13 +326,13 @@ Only starts from state `PERSISTED_MATCH`, by the user's explicit choice ("Edit t
 
 1. Locate the single matching block by ID (reusing the position/count data from Step 1).
 2. Keep an in-memory copy of that exact block.
-3. Edit `.orchestrator/stories/<ID>.md` as a Level 2 draft.
+3. Edit `.orchestrator/projects/<project>/stories/<ID>.md` as a Level 2 draft.
 4. Run Checkpoint B in full, including the editorial pass on every loop.
 5. Immediately before replacing anything, reread the queue and re-validate uniqueness/position for that ID.
 6. If the block in the queue is still identical to the in-memory copy from step 2, replace only that block.
 7. If it changed in the meantime, stop and ask the user to reconcile — a quick re-confirmation never authorizes an overwrite over a version you haven't seen.
 
-There is no automatic resumption of an in-progress edit: if the session gets interrupted mid-edit, the in-memory base copy is gone, and if `.orchestrator/stories/<ID>.md` no longer matches the queue, the ID classifies as `PERSISTED_DRIFT` next time — manual reconciliation is the safe path, not a fabricated recovery.
+There is no automatic resumption of an in-progress edit: if the session gets interrupted mid-edit, the in-memory base copy is gone, and if `.orchestrator/projects/<project>/stories/<ID>.md` no longer matches the queue, the ID classifies as `PERSISTED_DRIFT` next time — manual reconciliation is the safe path, not a fabricated recovery.
 
 ### Resuming an interrupted final draft
 
@@ -311,7 +340,7 @@ A `FINAL_DRAFT` found on resume is never accepted just because it's well-formed,
 
 1. reread the draft in full;
 2. reread the real code of the zone and its relevant tests, same depth as Step 2;
-3. reread `.orchestrator/lessons-learned.md` and any relevant `.orchestrator/decisions/`;
+3. reread `.orchestrator/projects/<project>/lessons-learned.md` and any relevant `.orchestrator/projects/<project>/decisions/`;
 4. recover whatever is still available from the conversation (the user's earlier answers, evidence already gathered) — if part of that context is gone, say so as a limitation, never invent it;
 5. reclassify findings into outcome, scope, edge cases, decisions, assumptions, risks, evidence, and impact;
 6. compare that reconstruction against the draft and explicitly surface any loss, contradiction, or unsupported claim;
@@ -324,14 +353,14 @@ No sidecar file or new metadata is created for this — the existing file is pre
 
 Once Checkpoint B is confirmed, reclassify the state one more time and:
 
-- `FINAL_DRAFT` not yet in the queue: apply to `requirements-to-work.md` (see placeholder/append rules below).
+- `FINAL_DRAFT` not yet in the queue: apply to `requirements/<project>.md` (see placeholder/append rules below).
 - Editing a persisted story: replace only the original block, per the "Editing a persisted story" procedure above.
 - `PERSISTED_MATCH` (nothing changed): don't duplicate anything.
 - Drift or any other inconsistency: stop, don't write.
 
-After writing, reread the persisted block and compare it against the confirmed content, normalizing only line endings. **`.orchestrator/stories/<ID>.md` is never deleted** — it stays as the story's permanent record.
+After writing, reread the persisted block and compare it against the confirmed content, normalizing only line endings. **`.orchestrator/projects/<project>/stories/<ID>.md` is never deleted** — it stays as the story's permanent record.
 
-**Placeholder route**: replace the **entire placeholder block**, bounded by its `---` separators — not just the "(Replace with...)" line. `requirements-to-work.md`'s placeholders are full multi-section blocks (they include their own `## Depends on (optional)`/`## Subtasks (optional)` instructional prose); leaving any of that behind would corrupt the queue. After replacing, verify exactly one valid separator remains between the new block and its neighbors, with no leftover placeholder text.
+**Placeholder route**: replace the **entire placeholder block**, bounded by its `---` separators — not just the "(Replace with...)" line. `requirements/<project>.md`'s placeholders are full multi-section blocks (they include their own `## Depends on (optional)`/`## Subtasks (optional)` instructional prose); leaving any of that behind would corrupt the queue. After replacing, verify exactly one valid separator remains between the new block and its neighbors, with no leftover placeholder text.
 
 **Append route**: add the story at the end, preceded by exactly one `---` separator, outside the new block.
 
@@ -341,14 +370,14 @@ Close by informing: the story was added, the current total count of User Stories
 
 ### Leftover transitional previews
 
-Before treating a rollout of this flow as complete, inventory any `.orchestrator/preview-story-*.md` files left over from before this working file moved to `.orchestrator/stories/` — record each one's ID, header, and whether a story with that ID already exists in the queue or in `.orchestrator/stories/`. For each, offer the user to: rescue it manually as a Level 2 draft in `.orchestrator/stories/` (after checking for ID collisions), keep it aside for later review, or discard it — only with explicit confirmation per file. Never delete, migrate, or rename these automatically.
+Before treating a rollout of this flow as complete, inventory any `.orchestrator/preview-story-*.md` files left over from before this working file moved to `.orchestrator/projects/<project>/stories/` — record each one's ID, header, and whether a story with that ID already exists in the queue or in `.orchestrator/projects/<project>/stories/`. For each, offer the user to: rescue it manually as a Level 2 draft in `.orchestrator/projects/<project>/stories/` (after checking for ID collisions), keep it aside for later review, or discard it — only with explicit confirmation per file. Never delete, migrate, or rename these automatically.
 
 ## Rules
 
-- **Read-only over the base repo**: this skill never modifies code. It may read `.orchestrator/config.md`, real code, tests, `.orchestrator/lessons-learned.md`, `.orchestrator/decisions/`, and `modules/registry.md` when relevant to the analysis or to optional modules.
-- Its only write zones are `requirements-to-work.md` and `.orchestrator/stories/<Story-ID>.md`. It may create `.orchestrator/stories/` idempotently if missing; if that path exists as something other than a directory, it stops instead of writing.
-- It never creates new `.orchestrator/preview-story-<ID>.md` files, and never automatically deletes a persistent record in `.orchestrator/stories/`.
-- It doesn't write to `.orchestrator/objectives/`, code, or any other zone.
+- **Read-only over the base repo**: this skill never modifies code. It may read the selected catalog entry, real code, tests, project lessons/decisions and `modules/registry.md` when relevant.
+- Its only write zones are `requirements/<project>.md` and `.orchestrator/projects/<project>/stories/<Story-ID>.md`. It may create `.orchestrator/projects/<project>/stories/` idempotently if missing; if that path exists as something other than a directory, it stops instead of writing.
+- It never creates new `.orchestrator/preview-story-<ID>.md` files, and never automatically deletes a persistent record in `.orchestrator/projects/<project>/stories/`.
+- It doesn't write to `.orchestrator/projects/<project>/objectives/`, code, or any other zone.
 - Don't invent system behavior: whatever you claim about the current code has to come from having read it.
 - Don't assume architecture conventions from another project (layers, naming): research the target repo's real ones.
 - If the description is too large for a single story (touches 3+ unrelated domains), propose splitting it into 2 User Stories — the system can run them in parallel, that's what it's for.

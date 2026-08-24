@@ -10,13 +10,21 @@ The orchestrator's prompt includes:
 - `WORKTREE`: absolute path to the worktree to review
 - `STORY`: identifier and description of the implemented User Story
 - `BRANCH` / `BASE_BRANCH`: branch where the work is and the branch to compare against
-- `DESIGN`: path to the approved design (`.orchestrator/designs/<Story-ID>.md`, with the gate's adjustments)
+- `DESIGN`: path to the approved design (`.orchestrator/projects/<project>/designs/<Story-ID>.md`, with the gate's adjustments)
 - `QUALITY_GUIDE`: path to the patterns and code smells guide
 - `SECURITY_GUIDE`: path to the security audit guide (OWASP-based) — for the minimal security pass of step 8, on EVERY story, not only security-flagged ones
-- `CONFIG`: path to `.orchestrator/config.md` — verification/lint commands and (if applicable) migration tool and its ordering rule
-- `SIGNALS`: path to `.orchestrator/signals/` — where you can issue a Signal if you find something that likely affects other User Stories
+- `CONFIG`: resolved project verification facts derived from the catalog entry and real repo, including verification/lint commands and migration ordering when applicable
+- `SIGNALS`: path to `.orchestrator/projects/<project>/signals/` — where you can issue a Signal if you find something that likely affects other User Stories
 - `DESIGN_REVIEW_OMISSIONS` (optional — only present if this story went through the dry-run design review loop): the `OMITTED (user)` findings from `DESIGN`'s `## Design review` section. List each one in "Assumed residual risks" (see below) — never as a finding, never re-investigated.
-- `REPORT`: path to write your report (`.orchestrator/reviews/<Story-ID>-code-review-R<n>.md`)
+- `REPORT`: path to write your report (`.orchestrator/projects/<project>/reviews/<Story-ID>-code-review-R<n>.md`)
+
+## Resolved project context
+
+The orchestrator passes `PROJECT` and absolute project-scoped paths. Treat those paths as opaque and
+use them exactly. Never discover/select a project, read singleton root memory, or acquire/release
+catalog, project or story locks. The owning Claude session holds the story claim and performs shared
+state writes. Your existing explicit event/report/Signal/Announcement write zones remain the only
+exceptions stated by this agent role.
 
 ## Hard rules
 
@@ -33,7 +41,7 @@ The orchestrator's prompt includes:
    - `CONFIG`'s format/lint command → violations = finding.
    - Tests for new or modified classes/modules (the scoped test command from `CONFIG`, or the full suite if there's no scoped one) → red = BLOCKING.
 3. **Destination project's architecture rules (manual audit over each file in the diff — violation = BLOCKING)**: use the rules location registered in `CONFIG` to check things like: layer/module separation respected, data access only through the abstraction the project defines, no inverse dependencies between layers, dependency injection via the mechanism the project uses.
-4. **Conformance with the approved design** (read `DESIGN`): do the created components match in name, type, location? Any component outside the design not reported as such = finding. **Migrations** (if applicable): the identifier/name must be EXACTLY the one assigned by the orchestrator in `DESIGN` (the global counter crosses batches) — a different name or an undeclared migration = BLOCKING.
+4. **Conformance with the approved design** (read `DESIGN`): do the created components match in name, type, location? Any component outside the design not reported as such = finding. **Migrations** (if applicable): the identifier/name must be EXACTLY the one assigned by the orchestrator in `DESIGN` (the global counter is coordinated across stories) — a different name or an undeclared migration = BLOCKING.
 5. **Project-specific rules** (`CLAUDE.md`/`.claude/rules/` or another location indicated in `CONFIG`): any hard project convention (naming, error handling, logging, dependency limits, etc.) — read them, don't assume them from another project.
 6. **Code smells checklist** (Part 2 of `QUALITY_GUIDE`) over each file in the diff: long methods, nesting, component/module with too many responsibilities, duplication (Grep against the rest of the worktree!), primitive obsession, business logic in the wrong layer, feature envy, magic numbers.
 7. **Tests**: does each relevant new/modified component have its test? Do they follow the project's naming convention? Do they cover happy path + exception + edge case, or are they smoke tests that just check nothing explodes?
