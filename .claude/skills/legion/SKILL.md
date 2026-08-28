@@ -15,21 +15,21 @@ read old root memory after multiproject setup.
 
 ## Resolve
 
-1. Validate `.orchestrator/projects.yml` exactly as its schema documents.
-2. If missing, complete or cancel/restart the copy-first bootstrap. Do not continue on old paths.
-3. If empty, register the first project under the brief catalog mutex.
-4. Resolve:
+1. Run `CLAUDE.md`'s project resolver and obey the action returned by its single normative table.
+   Do not independently interpret catalogs, markers, or legacy evidence and never continue on old
+   paths.
+2. After that resolver authorizes project operation, resolve:
    - requirements: `requirements/<project>.md`;
    - memory: `.orchestrator/projects/<project>/`;
    - repo: `workspace/<repo_dir>`;
    - worktree: `workspace/worktrees/<project>--<Story-ID>`;
    - branch: `<branch_prefix>/<Story-ID>`;
    - docs/scripts/module output: namespaces derived from the selected project.
-5. Revalidate that the repo is Git, physically contained in `workspace/`, and matches optional
+3. Revalidate that the repo is Git, physically contained in `workspace/`, and matches optional
    sanitized remote. A failure blocks only this project.
-6. Fetch origin before planning when present. Never pull automatically; ask before `--ff-only`.
+4. Fetch origin before planning when present. Never pull automatically; ask before `--ff-only`.
    Divergence is a user-resolved blocker.
-7. Read requirements, project assignments/components/lessons/designs/decisions/signals/
+5. Read requirements, project assignments/components/lessons/designs/decisions/signals/
    announcements, capabilities, module registry and real Git worktree state.
 
 ## Resume and reconstruct
