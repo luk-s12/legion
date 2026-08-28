@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
 
 > Legion es multiproyecto desde la instalación. Registrá/seleccioná el proyecto en
 > `.orchestrator/projects.yml`; requirements y memoria quedan namespaced. Varias sesiones de Claude
@@ -179,17 +179,19 @@ El protocolo completo de orquestación está en [`CLAUDE.md`](CLAUDE.md). Las re
 
 ```text
 legion/
-├── requirements/<project>.md       # objetivos e historias
+├── requirements/<project>.md             # objetivos e historias
 ├── workspace/
 │   ├── <repo_dir>/                       # un clone por proyecto registrado
 │   └── worktrees/<project>--<Story-ID>/  # entrega aislada por historia
 ├── .claude/
-│   ├── agents/                   # implementadores, especialistas y revisores
-│   └── skills/                   # comandos y guías reutilizables
-├── .orchestrator/                # configuración, planes, estado y auditoría
-├── modules/                      # módulos instalados, registro, reportes y salidas
-├── docs/<project>/             # documentación generada, cuando se solicita
-└── scripts/<project>/          # scripts auxiliares de datos, cuando se solicitan
+│   ├── agents/                           # implementadores, especialistas y revisores
+│   └── skills/                           # comandos y guías reutilizables
+├── .orchestrator/
+│   ├── projects.yml                      # catálogo de proyectos, única autoridad de configuración
+│   └── projects/<project>/               # memoria, diseños, revisiones y estado por proyecto
+├── modules/                              # módulos instalados, registro, reportes y salidas
+├── docs/<project>/                       # documentación generada, cuando se solicita
+└── scripts/<project>/                    # scripts auxiliares de datos, cuando se solicitan
 ```
 
 ## Licencia
