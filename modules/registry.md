@@ -5,8 +5,9 @@ but for this subsystem. **Written only by `/new-module` (alta) and `/module` (un
 agents and `/legion` consult it, never write to it directly.
 
 States: `installed` (usable) → `deprecated` (won't be selected for new activations, existing
-references can still finish) → `uninstalled` (physically removed from `modules/installed/`, row
-kept for history — `reputation.md`/`metrics.md`/old reports still cite this module by name).
+references can still finish) → `uninstalled` (not usable; exact removal from `modules/installed/`
+was requested, but a failed/partial cleanup may leave residue that must never be trusted or reused;
+row kept for history — `reputation.md`/`metrics.md`/old reports still cite this module by name).
 
 ## Registry
 

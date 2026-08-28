@@ -112,6 +112,9 @@ Cada proyecto tiene su propio techo `max_parallel`. Los claims se cuentan bajo e
 | Una lección de producción que conviene retener | `/new-lesson` | Guía persistente para futuros cambios en esa zona |
 | Una capacidad externa para Legion | `/new-module <repo-o-ruta>` | Un módulo instalado después de revisar permisos y riesgos |
 | Un módulo generador ya instalado | `/run-module <nombre>` | Un artefacto regenerable fuera del ciclo de historias |
+| Un checkout de Legion anterior al soporte multiproyecto | `/legion-upgrade` | Una migración guiada que conserva el trabajo existente |
+
+Para migrar un checkout anterior, ejecutá `git pull --ff-only`, iniciá una nueva sesión de Claude Code y después ejecutá `/legion-upgrade`. Detecta el layout singleton, muestra un preview y lo migra al layout multiproyecto sin borrar originales. Git sigue bajo tu control: resolvé cualquier conflicto antes de empezar.
 
 Los comandos aceptan argumentos opcionales; si los invocás solos, los asistentes te guían. La prosa persistida sigue el idioma establecido por el repo destino; los tags estructurales permanecen en inglés.
 
