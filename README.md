@@ -1,9 +1,4 @@
-<p align="center">
-
-> Legion is multi-project by default. Register/select a project from
-> `.orchestrator/projects.yml`; project requirements and orchestration memory are namespaced.
-> Multiple Claude Code sessions may own different story claims in the same project. A batch is a
-> planning view, not a synchronization barrier.
+﻿<p align="center">
   <img src="assets/legion-wordmark.png" alt="LEGION" width="360">
 </p>
 
@@ -182,17 +177,19 @@ For the complete orchestration protocol, see [`CLAUDE.md`](CLAUDE.md). For modul
 
 ```text
 legion/
-├── requirements/<project>.md       # objectives and stories
+├── requirements/<project>.md             # objectives and stories
 ├── workspace/
 │   ├── <repo_dir>/                       # one clone per registered project
 │   └── worktrees/<project>--<Story-ID>/  # isolated delivery per story
 ├── .claude/
-│   ├── agents/                   # implementers, specialists, and reviewers
-│   └── skills/                   # user commands and reusable guidance
-├── .orchestrator/                # configuration, plans, state, and audit trail
-├── modules/                      # installed modules, registry, reports, outputs
-├── docs/<project>/             # generated documentation, when requested
-└── scripts/<project>/          # auxiliary data scripts, when requested
+│   ├── agents/                           # implementers, specialists, and reviewers
+│   └── skills/                           # user commands and reusable guidance
+├── .orchestrator/
+│   ├── projects.yml                      # project catalog, the sole configuration authority
+│   └── projects/<project>/               # per-project memory, designs, reviews, and state
+├── modules/                              # installed modules, registry, reports, outputs
+├── docs/<project>/                       # generated documentation, when requested
+└── scripts/<project>/                    # auxiliary data scripts, when requested
 ```
 
 ## License
