@@ -109,7 +109,7 @@ Each project has its own `max_parallel` ceiling. Story claims are counted while 
 | An installed generator module | `/run-module <name>` | A regenerable artifact outside the story cycle |
 | A Legion checkout from before multiproject support | `/legion-upgrade` | A guided migration that preserves existing work |
 
-To migrate an older checkout, run `git pull --ff-only`, start a new Claude Code session, then run `/legion-upgrade`. It detects the singleton layout, shows a preview, and migrates it to the multiproject layout without deleting originals. Git stays under your control: resolve any conflicts before starting.
+To migrate an older checkout, run `/legion-upgrade`. It finds the legacy layout on disk, or recovers it automatically if a Git pull already replaced it, then previews the migration to the multiproject layout without deleting originals. Start a new Claude Code session first only if your current one predates this command; Git conflicts remain yours to resolve.
 
 Commands accept optional inline arguments; invoked bare, the assistants guide you interactively. Conversation follows your language. Persisted prose follows the destination repo's established language; structural tags remain in English.
 
