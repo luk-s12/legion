@@ -14,7 +14,7 @@ requirements/<project>.md
 docs/<project>/
 scripts/<project>/
 workspace/<repo_dir>/
-workspace/worktrees/<project>--<Story-ID>/
+workspace/worktrees/<project>/<Story-ID>/
 modules/
 .claude/agents/
 .claude/skills/
@@ -186,7 +186,9 @@ To release: reread owner, verify the current `session_id`, remove only that exac
 incomplete evidence and requires a manual decision.
 
 Project owner fields: `session_id`, `command`, `project`, `acquired_at`.
-Story owner adds `story`, resolved `worktree`, `branch`.
+Story owner adds `story`, resolved `worktree`, `branch`. The resolved `worktree` is the nested
+path `workspace/worktrees/<project>/<Story-ID>` and may not yet exist on disk while provisioning
+is in progress.
 
 ### Shared writes
 
@@ -217,12 +219,22 @@ For every individual reservation:
 1. outside locks, choose an apparently eligible story;
 2. acquire project mutex;
 3. reread requirements, board, events and claims; reconcile against `git worktree list`;
-4. treat incomplete claims conservatively as capacity until manual resolution;
+4. treat incomplete claims conservatively as capacity until manual resolution. A valid claim
+   whose resolved `worktree` is not registered in `git worktree list --porcelain` (matched by
+   branch `<branch_prefix>/<Story-ID>`, not only by the just-computed nested path) is an
+   incomplete provisioning: it still counts as a capacity place, it is never recreated or
+   duplicated, and only its owning session retries the `worktree add` or releases the claim,
+   disambiguating with `EVENTS`;
 5. revalidate dependency and overlap conflicts;
 6. count story claims and compare with the selected project's `max_parallel`;
 7. if full, leave queued; otherwise atomically create the story claim;
 8. safely update assignments and release project mutex;
-9. create/reuse the exact namespaced worktree and launch its agent.
+9. create/reuse the exact namespaced worktree and launch its agent. Create the per-project parent
+   `workspace/worktrees/<project>/` idempotently (`mkdir -p`, or the host shell's idempotent
+   equivalent) immediately before the `worktree add`; after `worktree remove` during harvest,
+   attempt a non-recursive `rmdir` of that exact parent (see `### Worktree path and Story-ID
+   validation`). None of this — `worktree add/move/remove`, `mkdir`/`rmdir` — runs while the
+   project mutex is held.
 
 Two sessions therefore cannot both acquire the same story or final capacity place. A finalized or
 abandoned worktree without a claim consumes no capacity. Subagents are delegated by the owning
@@ -236,10 +248,17 @@ Signals and Announcements at design/finalization boundaries.
 The orchestrator exclusively creates/removes worktrees:
 
 ```sh
-git -C workspace/<repo_dir> worktree add \
-  ../worktrees/<project>--<Story-ID> \
+mkdir -p "<abs-root>/workspace/worktrees/<project>"
+git -C "<abs-root>/workspace/<repo_dir>" worktree add \
+  "<abs-root>/workspace/worktrees/<project>/<Story-ID>" \
   -b <branch_prefix>/<Story-ID> <base_branch>
 ```
+
+`<abs-root>`, `repo_dir`, parent, target, branch and base are resolved and validated beforehand
+(see `### Worktree path and Story-ID validation`); each value is passed as a separate argument.
+The snippet documents absolute operands and never authorizes concatenating a string for the shell
+to evaluate. The parent is created idempotently (`mkdir -p`, or the host shell's idempotent
+equivalent) — what binds is "create the parent idempotently", not the exact binary.
 
 Record the exact base commit in START. Before each provisioning, inspect the selected real repo for
 gitignored local architecture rules/files needed by an agent, show exact contained source/destination
@@ -247,8 +266,42 @@ paths and copy only paths the user confirms. Secret-like files require a separat
 confirmation. This discovery adds no catalog field or manifest. Never remove a worktree with
 uncommitted changes or use `--force` without deliberate confirmed discard.
 
+The per-project parent `workspace/worktrees/<project>/` is created idempotently (`mkdir -p`, or the
+host shell's idempotent equivalent) before each `worktree add` and is never a source of truth —
+story identity lives in the claim, the branch and `git worktree list`. After `worktree remove`
+during harvest, attempt a non-recursive `rmdir` of that exact canonical parent. If it fails,
+re-inspect the parent without following links: a real directory that still contains entries is a
+benign concurrent-use result; a missing parent is already clean; every other state or error is
+reported. Never classify by localized message text or by exit code alone. Never `rm -rf`,
+recursive-delete, glob or `--force` anything under `workspace/worktrees/`.
+
 Fetch origin before orchestration when present. If the local base is behind, ask before
 `git pull --ff-only`; divergence is resolved by the user. Never merge/rebase automatically.
+
+### Worktree path and Story-ID validation
+
+Before reserving, creating, reusing, moving (D3/D4) or removing a worktree:
+
+1. Resolve `project` from `.orchestrator/projects.yml` and validate its existing slug (the project
+   resolver above already does this).
+2. Validate `Story-ID` as a single path segment: non-empty; no `/`, `\`, `..`, NUL, control
+   characters, shell separators, or trailing dot or space; not a reserved Windows name (`CON`,
+   `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, with or without an extension).
+3. Validate the refname with `git check-ref-format refs/heads/"<branch_prefix>/<Story-ID>"` (not
+   `--branch`, which resolves special forms such as `@{-1}` or `-`).
+4. Build the target by joining already-validated segments and passing each as a separate argument;
+   never interpolate a command string.
+5. Canonicalize root, parent and leaf; reject a symlink/junction or any resolution outside
+   `workspace/worktrees/`.
+6. The parent `workspace/worktrees/<project>/` may be absent or a real contained directory. If it
+   is a file, link, worktree or ambiguous path, block.
+7. The leaf target must not exist: `git worktree add`/`git worktree move` nest inside an existing
+   directory and still exit 0 (`.orchestrator/migration-contract.md` documents this for `move`).
+
+`.claude/skills/legion/SKILL.md`, `.claude/skills/legion-upgrade/SKILL.md` and the D3/D4 section of
+`.orchestrator/migration-contract.md` cite this subsection by its exact title instead of repeating
+these rules. A skill that needs a nuance adds it as a named exception referencing this subsection,
+never as a copy of the list.
 
 ## Commands
 
@@ -349,7 +402,10 @@ work and all final reviews/events. Run the read-only trial merge and update proj
 reputation. A later story is a normal later run.
 
 Resume from existing worktrees and real diffs. Never recreate an existing worktree/branch or assume
-board text outweighs Git.
+board text outweighs Git. A worktree's existence is recognized by branch against
+`git worktree list --porcelain` (plus the mapping of a `migration-completed.md` when one exists),
+not only by the computed nested path; a claim with no worktree is resolved by the incomplete-
+provisioning rule in "Story reservation and concurrency", never by recreating it.
 
 ## Modules
 

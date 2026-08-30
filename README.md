@@ -74,7 +74,7 @@ On registration, Legion inspects the project and asks for the catalog fields it 
 Each approved story remains uncommitted in its own folder:
 
 ```bash
-cd workspace/worktrees/<project>--<Story-ID>
+cd workspace/worktrees/<project>/<Story-ID>
 git status
 # inspect, commit, push, and open a PR when satisfied
 ```
@@ -109,7 +109,7 @@ Each project has its own `max_parallel` ceiling. Story claims are counted while 
 | An installed generator module | `/run-module <name>` | A regenerable artifact outside the story cycle |
 | A Legion checkout from before multiproject support | `/legion-upgrade` | A guided migration that preserves existing work |
 
-To migrate an older checkout, run `git pull --ff-only`, start a new Claude Code session, then run `/legion-upgrade`. It detects the singleton layout, shows a preview, and migrates it to the multiproject layout without deleting originals. Git stays under your control: resolve any conflicts before starting.
+To migrate an older checkout, run `/legion-upgrade`. It finds the legacy layout on disk, or recovers it automatically if a Git pull already replaced it, then previews the migration to the multiproject layout without deleting originals. Start a new Claude Code session first only if your current one predates this command; Git conflicts remain yours to resolve.
 
 Commands accept optional inline arguments; invoked bare, the assistants guide you interactively. Conversation follows your language. Persisted prose follows the destination repo's established language; structural tags remain in English.
 
@@ -177,19 +177,25 @@ For the complete orchestration protocol, see [`CLAUDE.md`](CLAUDE.md). For modul
 
 ```text
 legion/
-├── requirements/<project>.md             # objectives and stories
+├── requirements/
+│   └── <project>.md                      # objectives and stories
 ├── workspace/
 │   ├── <repo_dir>/                       # one clone per registered project
-│   └── worktrees/<project>--<Story-ID>/  # isolated delivery per story
+│   └── worktrees/
+│       └── <project>/                    # one directory per project
+│           └── <Story-ID>/               # isolated delivery per story
 ├── .claude/
 │   ├── agents/                           # implementers, specialists, and reviewers
 │   └── skills/                           # user commands and reusable guidance
 ├── .orchestrator/
 │   ├── projects.yml                      # project catalog, the sole configuration authority
-│   └── projects/<project>/               # per-project memory, designs, reviews, and state
+│   └── projects/
+│       └── <project>/                    # per-project memory, designs, reviews, and state
 ├── modules/                              # installed modules, registry, reports, outputs
-├── docs/<project>/                       # generated documentation, when requested
-└── scripts/<project>/                    # auxiliary data scripts, when requested
+├── docs/
+│   └── <project>/                        # generated documentation, when requested
+└── scripts/
+    └── <project>/                        # auxiliary data scripts, when requested
 ```
 
 ## License

@@ -74,7 +74,7 @@ Al registrar un proyecto, Legion pregunta los campos de catálogo que no puede i
 Cada historia aprobada queda sin commitear en su propia carpeta:
 
 ```bash
-cd workspace/worktrees/<project>--<Story-ID>
+cd workspace/worktrees/<project>/<Story-ID>
 git status
 # revisá, commiteá, pusheá y abrí un PR cuando estés conforme
 ```
@@ -109,7 +109,7 @@ Cada proyecto tiene su propio techo `max_parallel`. Los claims se cuentan bajo e
 | Un módulo generador ya instalado | `/run-module <nombre>` | Un artefacto regenerable fuera del ciclo de historias |
 | Un checkout de Legion anterior al soporte multiproyecto | `/legion-upgrade` | Una migración guiada que conserva el trabajo existente |
 
-Para migrar un checkout anterior, ejecutá `git pull --ff-only`, iniciá una nueva sesión de Claude Code y después ejecutá `/legion-upgrade`. Detecta el layout singleton, muestra un preview y lo migra al layout multiproyecto sin borrar originales. Git sigue bajo tu control: resolvé cualquier conflicto antes de empezar.
+Para migrar un checkout anterior, ejecutá `/legion-upgrade`. Detecta el layout legacy en disco, o lo recupera automáticamente si un pull de Git ya lo reemplazó, y previsualiza la migración al layout multiproyecto sin borrar originales. Iniciá una nueva sesión de Claude Code solo si la actual es anterior a este comando; los conflictos de Git siguen siendo tuyos para resolver.
 
 Los comandos aceptan argumentos opcionales; si los invocás solos, los asistentes te guían. La prosa persistida sigue el idioma establecido por el repo destino; los tags estructurales permanecen en inglés.
 
@@ -177,19 +177,25 @@ El protocolo completo de orquestación está en [`CLAUDE.md`](CLAUDE.md). Las re
 
 ```text
 legion/
-├── requirements/<project>.md             # objetivos e historias
+├── requirements/
+│   └── <project>.md                      # objetivos e historias
 ├── workspace/
 │   ├── <repo_dir>/                       # un clone por proyecto registrado
-│   └── worktrees/<project>--<Story-ID>/  # entrega aislada por historia
+│   └── worktrees/
+│       └── <project>/                    # un directorio por proyecto
+│           └── <Story-ID>/               # entrega aislada por historia
 ├── .claude/
 │   ├── agents/                           # implementadores, especialistas y revisores
 │   └── skills/                           # comandos y guías reutilizables
 ├── .orchestrator/
 │   ├── projects.yml                      # catálogo de proyectos, única autoridad de configuración
-│   └── projects/<project>/               # memoria, diseños, revisiones y estado por proyecto
+│   └── projects/
+│       └── <project>/                    # memoria, diseños, revisiones y estado por proyecto
 ├── modules/                              # módulos instalados, registro, reportes y salidas
-├── docs/<project>/                       # documentación generada, cuando se solicita
-└── scripts/<project>/                    # scripts auxiliares de datos, cuando se solicitan
+├── docs/
+│   └── <project>/                        # documentación generada, cuando se solicita
+└── scripts/
+    └── <project>/                        # scripts auxiliares de datos, cuando se solicitan
 ```
 
 ## Licencia
