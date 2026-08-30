@@ -1,9 +1,4 @@
 ﻿<p align="center">
-
-> Legion es multiproyecto desde la instalación. Registrá/seleccioná el proyecto en
-> `.orchestrator/projects.yml`; requirements y memoria quedan namespaced. Varias sesiones de Claude
-> Code pueden poseer claims de stories distintas del mismo proyecto. Un batch es una vista de
-> planificación, no una barrera.
   <img src="assets/legion-wordmark.png" alt="LEGION" width="360">
 </p>
 

@@ -13,6 +13,10 @@ Read `CLAUDE.md` first. Its project resolver, bootstrap, lock and safe-write con
 mandatory. The catalog entry is the sole project configuration. Never discover a singleton repo or
 read old root memory after multiproject setup.
 
+If a completed `/legion-upgrade` marker shows retained (non-archived) legacy originals for this
+project, mention it once per session — they are a passive backup only, never a fallback source to
+read from or write through (`.orchestrator/migration-contract.md`, "Archival").
+
 ## Resolve
 
 1. Run `CLAUDE.md`'s project resolver and obey the action returned by its single normative table.
@@ -22,7 +26,12 @@ read old root memory after multiproject setup.
    - requirements: `requirements/<project>.md`;
    - memory: `.orchestrator/projects/<project>/`;
    - repo: `workspace/<repo_dir>`;
-   - worktree: `workspace/worktrees/<project>--<Story-ID>`;
+   - worktree: `workspace/worktrees/<project>--<Story-ID>`, unless a completed `/legion-upgrade`
+     marker's approved mapping registers that Story ID as a `deferred` legacy worktree — reconcile
+     by the confirmed mapping and real `git worktree list`, not only the namespaced path just
+     calculated, and never create a second worktree for the same story/branch. Writing through a
+     legacy path requires the normal claim plus an explicit reconciliation confirmation; read-only
+     observation is the default;
    - branch: `<branch_prefix>/<Story-ID>`;
    - docs/scripts/module output: namespaces derived from the selected project.
 3. Revalidate that the repo is Git, physically contained in `workspace/`, and matches optional
@@ -75,9 +84,13 @@ resolution. Do not add another lock type.
 
 ## Provision and launch
 
-Create/reuse the exact namespaced worktree from the selected base branch commit. Validate the base
-ref and final branch with `git check-ref-format`, quote them as arguments and reject control
-characters/shell separators. Never create from uncommitted base-repo changes. Discover gitignored
+Create/reuse the exact worktree resolved in step 2 above — the namespaced path, or the confirmed
+legacy path when the resolver mapped this story to a `deferred` legacy worktree (D5). Never create a
+new namespaced worktree for a story that already has one registered, legacy or not: check the
+resolved mapping and real `git worktree list` first, and reconcile into the existing worktree instead
+of provisioning a duplicate. Validate the base ref and final branch with `git check-ref-format`, quote
+them as arguments and reject control characters/shell separators. Never create from uncommitted
+base-repo changes. Discover gitignored
 local rules/files needed by agents from the selected real repo, show exact contained
 source/destination paths, and copy only user-confirmed paths. Secret-like files require a separate
 exact confirmation. Do not persist this discovery in the catalog. Never commit, push or create PRs.

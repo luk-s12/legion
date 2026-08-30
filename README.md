@@ -1,9 +1,4 @@
 ﻿<p align="center">
-
-> Legion is multi-project by default. Register/select a project from
-> `.orchestrator/projects.yml`; project requirements and orchestration memory are namespaced.
-> Multiple Claude Code sessions may own different story claims in the same project. A batch is a
-> planning view, not a synchronization barrier.
   <img src="assets/legion-wordmark.png" alt="LEGION" width="360">
 </p>
 

@@ -89,9 +89,12 @@ a clean deletion. Resolve with this table before treating an empty/missing catal
 | missing | yes | none | offer `/legion-upgrade` |
 | missing | no | none | block: incomplete/damaged installation |
 | valid or missing | any | in-progress | resume or cancel/restart; block other commands |
+| valid, has projects | any | completed + in-progress | apply the dual-marker transaction in `.orchestrator/migration-contract.md`; verified completion wins, otherwise block preserving both |
 | invalid | any | any | block without overwriting |
 
 A `completed` marker with an empty/missing catalog is itself inconsistent and blocks.
+The dual-marker row is a crash-recovery case, not a normal no-op. Its only normative resolver is
+`.orchestrator/migration-contract.md`; this bootstrap does not duplicate its schema or algorithm.
 
 Legacy evidence (`requirements-to-work.md`, the old flat `.orchestrator/*.md` memory files, content
 in the old `events`/`designs`/`reviews`/`decisions`/`signals`/`announcements`/`objectives`/`stories`/
@@ -113,23 +116,41 @@ mention only inside a plan/fixture/review is never sufficient evidence by itself
 `/legion-upgrade` then, without holding any lock while identifying, previewing or asking:
 
 1. identify the inheriting project and Git repo;
-2. ensure there are no active stories or worktrees pending harvest;
-3. ensure namespaced destinations do not exist;
-4. show exact source/destination preview — including which files came from disk vs. from the
-   pinned legacy commit — and ask for confirmation.
+2. verify Git topology per `.orchestrator/migration-contract.md` — a worktree link that escapes
+   this checkout's own repo blocks unconditionally, before anything else, and is never fixed
+   automatically (`git worktree repair` with explicit paths can rewrite a *different* installation);
+3. classify pending activity per that same contract's matrix — a live claim or a held mutex blocks;
+   an in-progress marker owned by this session resumes, owned by another session requires the
+   contract's explicit takeover; anything else (unverifiable activity, pending harvest) is evidence
+   to show and a single confirmation to ask for, never a silent block;
+4. ensure namespaced destinations do not exist;
+5. show exact source/destination preview — including which files came from disk vs. from the
+   pinned legacy commit, the worktree reconciliation mapping, and the archive-or-retain choice —
+   and ask for one confirmation covering all of it.
 
 Only then, in a first brief catalog-mutex window, publish the intent as
 `.orchestrator/migration-in-progress.md` (candidate prepared beforehand, rereading current state,
 atomically renamed under the lock, then the lock released). Unlocked again:
 
-5. copy, never move, old requirements and memory (when a source only exists as a Git blob,
+6. copy, never move, old requirements and memory (when a source only exists as a Git blob,
    rematerialize and verify it at its original singleton path first, then copy to the new one);
-6. compare content and hashes.
+7. compare content and hashes against the pinned algorithm in `migration-contract.md`;
+8. if the user opted to move legacy worktrees, reconcile them per that contract's state machine —
+   the one Git write this command ever performs, and only after copies are reverified intact.
+9. repoint D6 derived views only through approved structured fields, including inventoried absolute
+   old-root paths in settings and project scripts; prose and ambiguous references remain advisory.
 
 A second brief catalog-mutex window then publishes `projects.yml` last with
-candidate/verify/rename/reread, renames the marker to `migration-completed.md`, and releases. No
-expensive operation — copying, hashing, or waiting on the user — ever happens while either window's
-lock is held. Originals are retained as backup throughout.
+candidate/verify/rename/reread, builds and validates
+`migration-completed.md.candidate-<migration_id>` with `state: COMPLETED`, its final result/snapshot,
+completion identity, cleared owner and initial archive state, publishes and rereads it, retires the
+matching in-progress marker only after that proof, and releases. A filename rename alone never
+completes a migration. No
+expensive operation — copying, hashing, moving a worktree, or waiting on the user — ever happens
+while either window's lock is held. Originals are retained as backup throughout, and the completed
+marker itself is permanent evidence: no command ever deletes it. Optionally, once completed, archive
+the retained originals per `migration-contract.md` ("Archival") — never before the catalog is
+verified to resolve every copy.
 
 Before catalog publication, interruption blocks commands until resume or cancel/restart. Cancel
 removes only verified copies and returns to setup-required. It never enables a fallback mode.
@@ -256,11 +277,16 @@ No arguments. Resolves the project-resolver table above: no-op on a catalog that
 projects; directs to guided registration on an empty catalog with no legacy evidence; runs the
 bootstrap on legacy evidence from disk or the fixed legacy candidate commit (`ORIG_HEAD` by
 default). `cutover_base` only classifies that candidate; it is never the migration source. It
-resumes a pending marker and blocks with concrete evidence on an invalid catalog, ambiguous history
-or pending activity. There is no "old framework" case in this skill's own behavior — a session that has not
-reloaded the new skills has no `/legion-upgrade` to invoke in the first place; that guidance lives
-only in README/release notes. Never runs `git pull`, `merge`, `rebase`, `reset` or `stash`, and
-never updates installed modules.
+resumes a pending marker owned by this session, requires the explicit takeover protocol for one
+owned by another, and blocks with concrete evidence on an invalid catalog, a coupled Git topology,
+ambiguous history, a live claim or a held mutex — never on activity that is merely unverifiable or
+on a worktree pending harvest, which are surfaced as a single confirmation instead
+(`.orchestrator/migration-contract.md` is the normative schema/state machine; this skill and that
+contract never duplicate each other's prose). There is no "old framework" case in this skill's own
+behavior — a session that has not reloaded the new skills has no `/legion-upgrade` to invoke in the
+first place; that guidance lives only in README/release notes. Never runs `git pull`, `merge`,
+`rebase`, `reset` or `stash`, and never updates installed modules. The one Git write it ever performs
+is a confirmed `git worktree move` to reconcile a legacy worktree into the namespaced path.
 
 ### Auxiliary commands
 
