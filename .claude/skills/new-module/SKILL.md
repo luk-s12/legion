@@ -7,8 +7,9 @@ description: Installs an external module (a Claude Code project — an agent, op
 Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
-namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
-registration. Neither state permits old singleton paths.
+namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
+`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
 a sibling candidate, rename it to the known destination, reread, then release the owned mutex.

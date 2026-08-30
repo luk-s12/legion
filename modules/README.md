@@ -252,7 +252,9 @@ its own real rules.
   `source` fresh and compares hashes, regardless of whether `source` was a git URL or a local
   path — one mechanism for both.
 - **Manual re-negotiation**: `/module renegotiate <name> [rule_id]` reopens the question for the
-  **current** project without waiting for a version change — see `module/SKILL.md`.
+  **current** project without waiting for a version change. It rereads `module.md` and the exact
+  module-root-relative file declared by `provides_rules` after revalidating that the path exists
+  and remains physically contained in that installed module — see `module/SKILL.md`.
 - **No retroactivity**: re-negotiating (by version or manually) never reopens a story already
   `finalized` — its `designs/<Story-ID>.md` stays as historical record. If the user wants to
   apply a new verdict to a closed story, that's Phase 6 (post-closure correction), the existing

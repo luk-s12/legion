@@ -7,8 +7,9 @@ description: Lifecycle management for an already-installed module — uninstall 
 Resolve or confirm the project through `.orchestrator/projects.yml` before reading project state.
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
-namespaced worktrees. A missing catalog requires bootstrap; an empty catalog requires guided
-registration. Neither state permits old singleton paths.
+namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
+`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
 a sibling candidate, rename it to the known destination, reread, then release the owned mutex.
@@ -67,8 +68,10 @@ project safe-write contract.
 - Only valid if the module's current state is `deprecated` → flip it back to `installed` using the
   global registry safe-write contract. Nothing else changes — stories that kept referencing it in their
   `## Modules` never noticed the detour.
-- **Not valid on `uninstalled`** — the folder is physically gone, there's nothing to reactivate.
-  Tell the user a fresh `/new-module` is needed instead.
+- **Not valid on `uninstalled`** — that registry state is not usable and cannot be reactivated,
+  even if a failed/partial cleanup left residue under `modules/installed/<name>/`. Never trust or
+  reuse such residue. Tell the user a fresh `/new-module` is needed instead (after separately
+  confirmed exact cleanup if residue exists).
 
 ## `/module renegotiate <name> [rule_id]`
 
@@ -77,25 +80,42 @@ project (the selected slug in `.orchestrator/projects.yml`) — without waiting 
 version. Useful when the user just wants to revisit a call they already made.
 
 1. Look up `<name>` in `modules/registry.md`. **Valid only if its state is `installed` or
-   `deprecated`** — same criterion as `/module activate`: an `uninstalled` module has no clone
-   left to re-read `rules.md` from. If it's `uninstalled`, tell the user a fresh `/new-module` is
-   needed first.
-2. If the module has no `provides_rules` declared → nothing to renegotiate, say so and stop.
-3. Read `modules/installed/<name>/rules.md` and the current
+   `deprecated`** — same criterion as `/module activate`. An `uninstalled` registry row is not a
+   usable module, even if a failed/partial cleanup left filesystem residue. Never read or reuse
+   that residue; tell the user a fresh `/new-module` is needed first (after separately confirmed
+   exact cleanup if necessary).
+2. Resolve `modules/installed/<name>/` as the exact expected child of `modules/installed/`
+   (matching name, canonically contained, and not itself a symlink/junction), then read its
+   `module.md`. If the clone or manifest is missing, the manifest is not a regular file, or either
+   resolves outside that exact module root, stop and report the invalid installation; do not guess
+   a rules filename.
+3. Parse `module.md`'s YAML frontmatter with the same manifest parsing rules used by
+   `/new-module`; never infer `provides_rules` from Markdown body text. The field may appear at
+   most once and, when present, must be a single scalar string (not a sequence, mapping or block
+   value). Reject a duplicate or non-scalar declaration as an invalid manifest. If the field is
+   not declared in the frontmatter, there is nothing to renegotiate; say so and stop.
+4. Treat the declared `provides_rules` value as a module-root-relative file path. Reject it and
+   stop if it is empty, absolute/rooted, contains an unresolved placeholder, or resolves outside
+   `modules/installed/<name>/` (including through `..`, a symlink or a junction). Require the
+   resolved target to exist and be a regular file. These checks are repeated at renegotiation time
+   even though `/new-module` validated the path at install time, because installed module content
+   may have changed since then.
+5. Read that exact validated `provides_rules` file — never a hardcoded
+   `modules/installed/<name>/rules.md` — and the current
    `.orchestrator/projects/<project>/module-rules/<name>.md` for this project (if it doesn't exist
    yet, there's nothing negotiated to reopen — point the user at running a story that references
    the module instead, that's what triggers the first negotiation).
-4. If `[rule_id]` was passed, reopen only that entry; otherwise reopen every `rule_id` the module
+6. If `[rule_id]` was passed, reopen only that entry; otherwise reopen every `rule_id` the module
    currently declares. Ask with the same single multiSelect `AskUserQuestion` used for the
    original negotiation (`legion/SKILL.md`, "Module stages").
-5. The result is appended as a **new row** in the resolved project's `module-rules/<name>.md` through
+7. The result is appended as a **new row** in the resolved project's `module-rules/<name>.md` through
    the project safe-write contract — the
    previous row is never deleted or edited in place (same historical-record criterion as the rest
    of `.orchestrator/`).
-6. **No retroactivity**: this never reopens a story already `finalized` in this project — its
+8. **No retroactivity**: this never reopens a story already `finalized` in this project — its
    `designs/<Story-ID>.md` stays as it was approved. If the user wants a closed story to pick up
    the new verdict, that's Phase 6 (post-closure correction) of `/legion`, not this command.
-7. **Informational note on affected finalized designs** (not a reopening): if this `rule_id`'s
+9. **Informational note on affected finalized designs** (not a reopening): if this `rule_id`'s
    NEW verdict differs from the one embedded in any `finalized` story's `## Module rules applied`
    section, append one line under that story's entry in `designs/<Story-ID>.md`: "Note: this
    rule's verdict was renegotiated on `<date>` to `<new verdict>` for future stories — does not
@@ -106,8 +126,10 @@ version. Useful when the user just wants to revisit a call they already made.
 ## Rules
 
 - Never delete a registry row, only change its state.
-- Never touch `modules/installed/<name>/` without the explicit confirmation and exact containment
-  validation in uninstall's step 3; no broad recursive shell deletion is permitted.
+- Never write to or delete `modules/installed/<name>/` without the explicit confirmation and exact
+  containment validation in uninstall's step 3; no broad recursive shell deletion is permitted.
 - `/module activate` never re-clones anything — it's a pure state flip, not an install.
-- `/module renegotiate` never touches `modules/installed/<name>/` or the registry — it only adds
-  a row to the resolved project's `module-rules/<name>.md`.
+- `/module renegotiate` reads `module.md` and its exact validated `provides_rules` target, but never
+  writes to or deletes anything in `modules/installed/<name>/` and never mutates the registry —
+  its only durable module-state change is a new row in the resolved project's
+  `module-rules/<name>.md`.

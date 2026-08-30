@@ -107,6 +107,9 @@ Each project has its own `max_parallel` ceiling. Story claims are counted while 
 | A production lesson worth retaining | `/new-lesson` | Persistent guidance for future work in that code area |
 | An external Legion capability | `/new-module <repo-or-path>` | An installed module after permission and risk review |
 | An installed generator module | `/run-module <name>` | A regenerable artifact outside the story cycle |
+| A Legion checkout from before multiproject support | `/legion-upgrade` | A guided migration that preserves existing work |
+
+To migrate an older checkout, run `/legion-upgrade`. It finds the legacy layout on disk, or recovers it automatically if a Git pull already replaced it, then previews the migration to the multiproject layout without deleting originals. Start a new Claude Code session first only if your current one predates this command; Git conflicts remain yours to resolve.
 
 Commands accept optional inline arguments; invoked bare, the assistants guide you interactively. Conversation follows your language. Persisted prose follows the destination repo's established language; structural tags remain in English.
 

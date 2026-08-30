@@ -5,8 +5,11 @@ authority; each project's memory lives under `.orchestrator/projects/<project>/`
 
 ## Global files
 
-- `projects.yml`: versioned project catalog. Empty means first-project registration is required.
-- `projects.yml.schema.md`: compact schema, validation and path-containment rules.
+- `projects.yml`: versioned project catalog. An empty or missing catalog never defaults to
+  first-project registration by itself — apply exclusively `CLAUDE.md`'s project-resolver table
+  under "Required bootstrap for an older installation" (empty and missing resolve differently) and
+  `/legion-upgrade`.
+- `projects-schema.md`: compact schema, validation and path-containment rules.
 - `capabilities.md`: global registry of Claude agent roles.
 - `projects/.template/`: memory copied when registering a project.
 - `runtime-contract/README.md`: minimal catalog/project/story locking contract.

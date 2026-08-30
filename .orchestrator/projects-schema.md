@@ -34,5 +34,10 @@ Rules:
 - Before every project-scoped command, `workspace/<repo_dir>` must be a usable Git repository.
 - When `remote` is present, the sanitized repository remote must match it. Credentials are never
   stored or displayed.
-- An empty catalog requires guided registration. A missing catalog requires the copy-first
-  bootstrap described in `CLAUDE.md`. Neither state enables a single-project fallback.
+- An empty or missing catalog does not by itself mean a fresh installation — a clean `git pull`
+  onto a pre-multiproject checkout leaves an empty catalog behind. Resolve with `CLAUDE.md`'s
+  project-resolver table: legacy evidence, on either state, routes to `/legion-upgrade`'s
+  copy-first bootstrap. Without legacy evidence, an **empty** catalog routes to guided
+  registration, but a **missing** one blocks as an incomplete/damaged installation — a missing
+  file with no legacy evidence is not the same as a validated empty one. Neither state enables a
+  single-project fallback.
