@@ -74,7 +74,7 @@ Al registrar un proyecto, Legion pregunta los campos de catálogo que no puede i
 Cada historia aprobada queda sin commitear en su propia carpeta:
 
 ```bash
-cd workspace/worktrees/<project>--<Story-ID>
+cd workspace/worktrees/<project>/<Story-ID>
 git status
 # revisá, commiteá, pusheá y abrí un PR cuando estés conforme
 ```
@@ -177,19 +177,25 @@ El protocolo completo de orquestación está en [`CLAUDE.md`](CLAUDE.md). Las re
 
 ```text
 legion/
-├── requirements/<project>.md             # objetivos e historias
+├── requirements/
+│   └── <project>.md                      # objetivos e historias
 ├── workspace/
 │   ├── <repo_dir>/                       # un clone por proyecto registrado
-│   └── worktrees/<project>--<Story-ID>/  # entrega aislada por historia
+│   └── worktrees/
+│       └── <project>/                    # un directorio por proyecto
+│           └── <Story-ID>/               # entrega aislada por historia
 ├── .claude/
 │   ├── agents/                           # implementadores, especialistas y revisores
 │   └── skills/                           # comandos y guías reutilizables
 ├── .orchestrator/
 │   ├── projects.yml                      # catálogo de proyectos, única autoridad de configuración
-│   └── projects/<project>/               # memoria, diseños, revisiones y estado por proyecto
+│   └── projects/
+│       └── <project>/                    # memoria, diseños, revisiones y estado por proyecto
 ├── modules/                              # módulos instalados, registro, reportes y salidas
-├── docs/<project>/                       # documentación generada, cuando se solicita
-└── scripts/<project>/                    # scripts auxiliares de datos, cuando se solicitan
+├── docs/
+│   └── <project>/                        # documentación generada, cuando se solicita
+└── scripts/
+    └── <project>/                        # scripts auxiliares de datos, cuando se solicitan
 ```
 
 ## Licencia

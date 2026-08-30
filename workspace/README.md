@@ -8,12 +8,15 @@ workspace/
 ├── stocks/                       # repo_dir for project stocks
 ├── billing/                      # repo_dir for project billing
 └── worktrees/
-    ├── stocks--STOCK-10/
-    └── billing--BILL-3/
+    ├── stocks/                   # one parent per project
+    │   ├── STOCK-10/
+    │   └── STOCK-14/             # stories of the same project share the <project>/ segment
+    └── billing/
+        └── BILL-3/
 ```
 
 A repo clone is never edited directly by an implementing agent. Legion creates one Git worktree per
-story at `workspace/worktrees/<project>--<Story-ID>` using the selected project's catalog entry.
+story at `workspace/worktrees/<project>/<Story-ID>` using the selected project's catalog entry.
 Multiple Claude Code sessions can own distinct story claims for one project.
 
 Before provisioning, Legion validates physical containment, Git state, base branch and optional

@@ -71,7 +71,8 @@ publishing intent; a failure releases the lock and blocks without mutation.
 ## Worktree reconciliation (D3/D4)
 
 Before preview, build one row per legacy worktree with: current path, proposed namespaced path
-(`workspace/worktrees/<project>--<Story-ID>`), the real admin entry from
+(`workspace/worktrees/<project>/<Story-ID>` — one per-project parent directory, the Story ID
+nested directly inside it, no `--` separator), the real admin entry from
 `git worktree list --porcelain`, branch and `HEAD`, the Story ID with the evidence used to confirm it
 (dirname, branch, requirements, board — never the dirname alone when they disagree), a
 `status --porcelain=v1 -z` byte snapshot plus a `worktree_content_manifest` OID (tracked + untracked +
@@ -120,10 +121,18 @@ The post-preview confirmation offers exactly: (1) move eligible worktrees to the
 without writing anything.
 
 If (1): the intent and approved mapping publish into `migration-in-progress.md` as immutable — they
-are never rewritten per move. Each worktree then moves individually with `git worktree move`, no
-global lock held during the move. After each move, verify path, the bidirectional Git link, branch,
-`HEAD`, index, and both the `status --porcelain=v1 -z` bytes and the `worktree_content_manifest`
-against the pre-move snapshot.
+are never rewritten per move. A `migration-in-progress.md` already published before this contract
+retargeted D3/D4 to the nested layout is resumed with its `worktree_mappings` exactly as published
+(a `--` destination); it is never reinterpreted to the nested path. Only an intent published after
+the retarget lands on `workspace/worktrees/<project>/<Story-ID>`. Before each `git worktree move`,
+create the per-project parent `workspace/worktrees/<project>/` idempotently (`mkdir -p`, canonical
+parent — not a symlink, real contained directory) and validate segments and target per `CLAUDE.md`'s
+`### Worktree path and Story-ID validation`. Each worktree then moves individually with
+`git worktree move`, no global lock held during the move. After each move, verify path, the
+bidirectional Git link, branch, `HEAD`, index, and both the `status --porcelain=v1 -z` bytes and the
+`worktree_content_manifest` against the pre-move snapshot. If a move ends `move_failed_clean` and the
+parent was left empty, attempt a non-recursive `rmdir` of that exact parent; never under a lock,
+never recursive.
 
 Three Git behaviours are load-bearing here and are verified, never assumed:
 
@@ -132,13 +141,13 @@ Three Git behaviours are load-bearing here and are verified, never assumed:
   silently fails (`fatal: ... No such file or directory`) or, worse, resolves somewhere unintended.
   Build both operands as absolute, canonicalized paths.
 - **The target must not exist at all.** Given an existing directory — even an empty one — Git moves
-  the worktree *inside* it (`.../<project>--<Story-ID>/<Story-ID>`) and still exits 0. That nested
+  the worktree *inside* it (`.../<project>/<Story-ID>/<Story-ID>`) and still exits 0. That nested
   result is not the approved mapping, so the target's absence is re-verified immediately before each
   individual move, not only during preflight. An existing target aborts that item as
   `move_failed_clean` without invoking Git; a post-move path that differs from the approved target by
   even one segment is `ambiguous`, never `moved_verified`.
 - **The administrative directory keeps its legacy basename.** After moving
-  `worktrees/<Story-ID>` to `worktrees/<project>--<Story-ID>`, the admin entry stays
+  `worktrees/<Story-ID>` to `worktrees/<project>/<Story-ID>`, the admin entry stays
   `.git/worktrees/<Story-ID>` and only its `gitdir` file is rewritten to the new location. This is
   correct and expected: verification compares the bidirectional link's *resolved targets*, never the
   admin directory's basename, which would otherwise fail every successful move.
@@ -155,8 +164,13 @@ Resuming derives each item's real state from Git — never from a per-item marke
   failure once (stderr, classification) under a brief `catalog.lock` window, then offer retry-exact or
   leave `deferred`.
 - `deferred`: locked, claimed, activity not verifiable, or the user chose not to move it. Never moved.
-  `/legion` must recognize it via the approved mapping (see below) and never create a duplicate
-  worktree for the same story/branch.
+  `/legion` recognizes it **by branch** (`<branch_prefix>/<Story-ID>`) against
+  `git worktree list --porcelain`, with the approved `worktree_mappings` and the derived view as
+  mandatory corroborating evidence — Git is authoritative over worktrees, the mapping records the
+  intent, not the state. All three must agree that the worktree is still at its legacy path; if they
+  disagree it is `ambiguous` (manual block), never a second worktree for the same story/branch. This
+  is a deliberate change of the authoritative recognition channel (from "via the approved mapping"),
+  recorded as an architecture decision; the state machine, schema and hashing are unchanged.
 - `ambiguous`: source and target both present, both absent, cross-linked, or any HEAD/status/manifest
   mismatch against the snapshot. Blocks activation; requires manual reconciliation, never resume.
 
@@ -180,8 +194,10 @@ candidate/validate/rename/reread. Never a global find-replace.
 
 A cell is repointed only when its worktree actually reached `moved_verified`. A `deferred` item was
 never moved and still lives at its legacy path: repointing it would publish a path that does not
-exist and would defeat D5, which depends on the derived view and the completed marker agreeing that
-the worktree is still legacy. Items that are `pending`, `move_failed_clean` or `ambiguous` never
+exist and would defeat D5, which requires `git worktree list --porcelain` (authoritative, matched by
+branch), the derived view and the completed marker to all agree that the worktree is still at its
+legacy path — a disagreement is `ambiguous`, never a duplicate worktree. Items that are `pending`,
+`move_failed_clean` or `ambiguous` never
 reach this step at all, since `WORKTREES_RESOLVED` gates it. When a migration mixes outcomes, only
 the moved subset is rewritten and the deferred rows keep their original bytes. If the live table cannot be uniquely
 identified, or a path reference only appears in prose, do not edit it automatically: leave the bytes
