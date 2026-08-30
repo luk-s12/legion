@@ -21,3 +21,6 @@ evidence and require a manual decision.
 
 Release rereads and verifies `session_id`, removes only that known `owner.md`, then uses `rmdir` on
 that exact lock. Recursive removal is forbidden.
+
+A singleton → multiproject migration's own identity, ownership, takeover and hashing contract is not
+described here — see `.orchestrator/migration-contract.md`, the single source for that.
