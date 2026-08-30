@@ -98,8 +98,10 @@ acting on any marker:
 10. Block if the target slug or any namespaced destination already exists; never merge into or
    overwrite an existing destination.
 11. Reject symlinks/junctions that escape the repo root.
-12. Build the worktree inventory required by `migration-contract.md` ("Worktree reconciliation"):
-    per legacy worktree, current path, proposed namespaced path, real admin entry, branch/`HEAD`,
+12. Build the worktree inventory required by `migration-contract.md` ("Worktree reconciliation").
+    The proposed namespaced path is the nested `workspace/worktrees/<project>/<Story-ID>`; validate
+    its segments and target per `CLAUDE.md`'s `### Worktree path and Story-ID validation`. Per
+    legacy worktree, capture current path, proposed namespaced path, real admin entry, branch/`HEAD`,
     confirmed Story ID with its evidence, `status --porcelain=v1 -z` bytes plus
     `worktree_content_manifest`, ahead/behind, and any lock/claim. A dirname/branch/admin-entry
     mismatch requires an explicit user mapping decision — never trust the dirname alone. Treat any
@@ -142,7 +144,7 @@ infers them from the real repo when needed. The old `config.md` is kept as backu
 | `.orchestrator/module-rules/<old-repo-name>/*.md` | `.orchestrator/projects/<project>/module-rules/*.md` |
 | `docs/<old-repo-name>/` | `docs/<project>/` |
 | `scripts/<old-repo-name>/` | `scripts/<project>/` |
-| `workspace/worktrees/<Story-ID>` | `workspace/worktrees/<project>--<Story-ID>` via `git worktree move`, optional and confirmed — after copies are verified and before the catalog is published (`WORKTREES_RESOLVED` precedes `CATALOG_PUBLISHED`), per `migration-contract.md` |
+| `workspace/worktrees/<Story-ID>` | `workspace/worktrees/<project>/<Story-ID>` via `git worktree move`, optional and confirmed — after copies are verified and before the catalog is published (`WORKTREES_RESOLVED` precedes `CATALOG_PUBLISHED`), per `migration-contract.md` |
 | `.orchestrator/config.md` | no destination — kept only as backup/reference |
 | `workspace/<repo_dir>/` | same path; registered, never copied |
 | `modules/registry.md`, `modules/installed/` | same global paths; never touched |
@@ -220,12 +222,15 @@ archiving.
 
 10. Reverify the source snapshot is still intact, reread the published intent marker, and require
     that `point_of_no_return_accepted` is exactly true,
-    then begin per `migration-contract.md`. Move each
+    then begin per `migration-contract.md`. Before each move, create the per-project parent
+    `workspace/worktrees/<project>/` idempotently (`mkdir -p`, canonical real directory, no lock).
+    Move each
     eligible worktree individually with `git worktree move`, no lock held during the move. Pass both
     operands as **absolute** paths — relative ones resolve against the repo dir, not the
     installation root — and re-verify immediately before each individual move that the target path
     does not exist at all, because Git moves the worktree *inside* an existing directory and still
-    exits 0. After each move, verify path, bidirectional Git link, branch, `HEAD`, index, `status
+    exits 0. If a move ends `move_failed_clean` and left the parent empty, `rmdir` that exact parent
+    non-recursively. After each move, verify path, bidirectional Git link, branch, `HEAD`, index, `status
     --porcelain=v1 -z` bytes and `worktree_content_manifest` against the pre-move snapshot. The
     admin directory keeps its legacy basename by design; compare resolved link targets, never that
     basename.

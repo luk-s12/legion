@@ -74,7 +74,7 @@ On registration, Legion inspects the project and asks for the catalog fields it 
 Each approved story remains uncommitted in its own folder:
 
 ```bash
-cd workspace/worktrees/<project>--<Story-ID>
+cd workspace/worktrees/<project>/<Story-ID>
 git status
 # inspect, commit, push, and open a PR when satisfied
 ```
@@ -177,19 +177,25 @@ For the complete orchestration protocol, see [`CLAUDE.md`](CLAUDE.md). For modul
 
 ```text
 legion/
-├── requirements/<project>.md             # objectives and stories
+├── requirements/
+│   └── <project>.md                      # objectives and stories
 ├── workspace/
 │   ├── <repo_dir>/                       # one clone per registered project
-│   └── worktrees/<project>--<Story-ID>/  # isolated delivery per story
+│   └── worktrees/
+│       └── <project>/                    # one directory per project
+│           └── <Story-ID>/               # isolated delivery per story
 ├── .claude/
 │   ├── agents/                           # implementers, specialists, and reviewers
 │   └── skills/                           # user commands and reusable guidance
 ├── .orchestrator/
 │   ├── projects.yml                      # project catalog, the sole configuration authority
-│   └── projects/<project>/               # per-project memory, designs, reviews, and state
+│   └── projects/
+│       └── <project>/                    # per-project memory, designs, reviews, and state
 ├── modules/                              # installed modules, registry, reports, outputs
-├── docs/<project>/                       # generated documentation, when requested
-└── scripts/<project>/                    # auxiliary data scripts, when requested
+├── docs/
+│   └── <project>/                        # generated documentation, when requested
+└── scripts/
+    └── <project>/                        # auxiliary data scripts, when requested
 ```
 
 ## License

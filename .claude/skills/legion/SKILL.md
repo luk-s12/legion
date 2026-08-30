@@ -26,11 +26,14 @@ read from or write through (`.orchestrator/migration-contract.md`, "Archival").
    - requirements: `requirements/<project>.md`;
    - memory: `.orchestrator/projects/<project>/`;
    - repo: `workspace/<repo_dir>`;
-   - worktree: `workspace/worktrees/<project>--<Story-ID>`, unless a completed `/legion-upgrade`
-     marker's approved mapping registers that Story ID as a `deferred` legacy worktree — reconcile
-     by the confirmed mapping and real `git worktree list`, not only the namespaced path just
-     calculated, and never create a second worktree for the same story/branch. Writing through a
-     legacy path requires the normal claim plus an explicit reconciliation confirmation; read-only
+   - worktree: `workspace/worktrees/<project>/<Story-ID>` (nested: one per-project parent, the
+     Story ID directly inside it, no `--`). Recognize an existing worktree **by branch**
+     (`<branch_prefix>/<Story-ID>`) against real `git worktree list --porcelain`, not only the
+     nested path just calculated — this also covers a `--` or singleton worktree from an older
+     `/legion-upgrade` and a `deferred` legacy worktree from a completed marker's approved mapping,
+     which stays corroborating evidence, not the sole channel. If a worktree already exists for that
+     branch in any layout, reconcile inside it; never create a second one. Writing through a legacy
+     path requires the normal claim plus an explicit reconciliation confirmation; read-only
      observation is the default;
    - branch: `<branch_prefix>/<Story-ID>`;
    - docs/scripts/module output: namespaces derived from the selected project.
@@ -70,7 +73,10 @@ subtask. Risky zones may run `research-agent` first.
    let the user wait, cancel or explicitly resolve it; never steal it.
 4. Rename the verified candidate to `owner.md` and reread it.
 5. Reread requirements, assignments and claims; reconcile them with Git.
-6. Treat incomplete claims conservatively as capacity until manually resolved.
+6. Treat incomplete claims conservatively as capacity until manually resolved — including a valid
+   claim whose resolved nested `worktree` is not yet registered in `git worktree list --porcelain`
+   (matched by branch): it holds its place, is never recreated or duplicated, and only its owning
+   session retries the `worktree add` or releases it.
 7. Revalidate business dependencies and overlap conflicts.
 8. Count story claims, including incomplete claims conservatively. If the count is greater than or
    equal to `max_parallel`, keep the story queued.
@@ -84,12 +90,18 @@ resolution. Do not add another lock type.
 
 ## Provision and launch
 
-Create/reuse the exact worktree resolved in step 2 above — the namespaced path, or the confirmed
-legacy path when the resolver mapped this story to a `deferred` legacy worktree (D5). Never create a
-new namespaced worktree for a story that already has one registered, legacy or not: check the
-resolved mapping and real `git worktree list` first, and reconcile into the existing worktree instead
-of provisioning a duplicate. Validate the base ref and final branch with `git check-ref-format`, quote
-them as arguments and reject control characters/shell separators. Never create from uncommitted
+Create/reuse the exact worktree resolved in step 2 above — the nested namespaced path
+`workspace/worktrees/<project>/<Story-ID>`, or the confirmed legacy path when the resolver mapped
+this story to a `deferred` legacy worktree (D5). Never create a new namespaced worktree for a story
+that already has one registered, legacy or not: check real `git worktree list --porcelain` by branch
+(and the resolved mapping as corroboration) first, and reconcile into the existing worktree instead
+of provisioning a duplicate. Validate `Story-ID`, parent and leaf per `CLAUDE.md`'s
+`### Worktree path and Story-ID validation`. Create the per-project parent
+`workspace/worktrees/<project>/` idempotently (`mkdir -p`, or the host shell's idempotent
+equivalent) immediately before the `worktree add`, and after `worktree remove` during harvest
+attempt a non-recursive `rmdir` of that exact parent — both outside any lock. Validate the base ref
+and final branch with `git check-ref-format`, quote them as arguments and reject control
+characters/shell separators. Never create from uncommitted
 base-repo changes. Discover gitignored
 local rules/files needed by agents from the selected real repo, show exact contained
 source/destination paths, and copy only user-confirmed paths. Secret-like files require a separate
