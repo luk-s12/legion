@@ -11,9 +11,36 @@ authority; each project's memory lives under `.orchestrator/projects/<project>/`
   `/legion-upgrade`.
 - `projects-schema.md`: compact schema, validation and path-containment rules.
 - `capabilities.md`: global registry of Claude agent roles.
-- `projects/.template/`: memory copied when registering a project.
+- `projects/`: one `<project>/` memory directory per registered project, plus a `.gitkeep`. There
+  is no on-disk template — the skeleton below is the authoritative source, materialized fresh when a
+  project is registered or migrated with `/legion-upgrade`.
 - `runtime-contract/README.md`: minimal catalog/project/story locking contract.
 - `runtime/`: ignored ephemeral owners and story claims.
+
+## Project memory skeleton
+
+Registering a project (or migrating one with `/legion-upgrade`) creates this exact tree under
+`.orchestrator/projects/<project>/`. Each of the five Markdown files starts with only its title
+header (`# <name> — <project>`) and a one-line purpose; every directory starts empty (tracked with
+a `.gitkeep`).
+
+```text
+.orchestrator/projects/<project>/
+├── assignments.md          # derived scheduling board
+├── components.md           # orchestrator-owned reusable component registry
+├── lessons-learned.md      # permanent business-rule incidents
+├── metrics.md              # derived duration / token-consumption history
+├── reputation.md           # derived review audit
+├── announcements/          # <ID>.md horizontal research findings
+├── decisions/              # DEC-NNN.md architectural conflict decisions
+├── designs/                # <Story-ID>.md approved design and dry-run state
+├── events/                 # <Story-ID>.md append-only agent progress
+├── module-rules/           # per-project accepted module rules
+├── objectives/             # /new-objective breakdown memory
+├── reviews/                # <Story-ID>-*.md design / code review reports
+├── signals/                # <ID>.md horizontal signals
+└── stories/                # /new-story working drafts (not schedulable)
+```
 
 ## Project memory
 
