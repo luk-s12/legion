@@ -21,8 +21,8 @@ modules/
 .orchestrator/
 ├── projects.yml
 ├── capabilities.md
-├── projects/.template/
-├── projects/<project>/
+├── projects/                      # one <project>/ per registered project (+ .gitkeep)
+├── projects/<project>/            # materialized from the skeleton in .orchestrator/README.md
 │   ├── assignments.md
 │   ├── components.md
 │   ├── lessons-learned.md

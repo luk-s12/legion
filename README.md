@@ -189,14 +189,32 @@ legion/
 │   └── skills/                           # user commands and reusable guidance
 ├── .orchestrator/
 │   ├── projects.yml                      # project catalog, the sole configuration authority
-│   └── projects/
-│       └── <project>/                    # per-project memory, designs, reviews, and state
+│   └── projects/                         # one <project>/ per registered project (+ .gitkeep)
+│       └── <project>/                    # per-project memory, materialized on registration
+│           ├── assignments.md            # derived scheduling board
+│           ├── components.md             # reusable component registry
+│           ├── lessons-learned.md        # permanent business-rule incidents
+│           ├── metrics.md                # derived duration / token history
+│           ├── reputation.md             # derived review audit
+│           ├── announcements/            # horizontal research findings
+│           ├── decisions/                # DEC-NNN architectural decisions
+│           ├── designs/                  # <Story-ID>.md approved designs
+│           ├── events/                   # <Story-ID>.md append-only progress
+│           ├── module-rules/             # per-project accepted module rules
+│           ├── objectives/               # /new-objective breakdown memory
+│           ├── reviews/                  # <Story-ID>-*.md review reports
+│           ├── signals/                  # horizontal signals
+│           └── stories/                  # /new-story working drafts
 ├── modules/                              # installed modules, registry, reports, outputs
 ├── docs/
 │   └── <project>/                        # generated documentation, when requested
 └── scripts/
     └── <project>/                        # auxiliary data scripts, when requested
 ```
+
+The `<project>/` memory tree has no on-disk template: it is materialized from the skeleton in
+[`.orchestrator/README.md`](.orchestrator/README.md) when a project is registered, or when
+`/legion-upgrade` migrates an older single-project checkout into the multiproject layout.
 
 ## License
 
