@@ -59,6 +59,8 @@ A function with more than 3-4 parameters, or a script/file that mixes input pars
 
 ## Smell vocabulary
 
+- **Vague procedure or parameter names** — `do_stuff`, `data`, `tmp`, single-letter params in a public procedure, or a name that doesn't say what the procedure changes. Names read together with the module/package prefix (Effective Go); Go and Rust generally avoid a `Get`/`get_` prefix on getters (not every use of `get`, and not every lookup name), and use vocabulary like `as_`/`to_`/`into_` with distinct meanings — no universal verb table. Verify against the codebase and the language guide.
+- **Comment noise** — header comments that repeat the function name/signature; keep the *why* and non-obvious contract (units, ownership of a returned pointer, error-code meaning, ordering constraints).
 - **Script/function that does too much** (equivalent to "god class" in OOP): a single file/function that parses, calculates, persists, and logs everything together.
 - **A function that uses more data from another module than its own** (equivalent to "feature envy"): move it to that module.
 - **The same 3+ values always travel together as loose parameters** (equivalent to "data clumps"): group them into a named structure/struct.

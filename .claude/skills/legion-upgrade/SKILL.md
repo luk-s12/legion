@@ -210,7 +210,10 @@ archiving.
 
 **Unlocked work — memory**
 
-7. Create the project's memory from `.orchestrator/projects/.template/`.
+7. Create the project's memory by materializing the project-memory skeleton documented in
+   `.orchestrator/README.md` ("Project memory skeleton") — the five titled Markdown files and the
+   empty tracked directories — directly under `.orchestrator/projects/<project>/`. There is no
+   on-disk template to copy from.
 8. Rematerialize, at their original singleton paths, every source recovered from Git; verify those
    backups; then copy every source to its new destination. Never move anything.
 9. Verify each file by size and OID (`hash_algorithm`/`object_format`); for directories, compare the

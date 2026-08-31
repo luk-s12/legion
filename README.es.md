@@ -189,14 +189,32 @@ legion/
 │   └── skills/                           # comandos y guías reutilizables
 ├── .orchestrator/
 │   ├── projects.yml                      # catálogo de proyectos, única autoridad de configuración
-│   └── projects/
-│       └── <project>/                    # memoria, diseños, revisiones y estado por proyecto
+│   └── projects/                         # un <project>/ por proyecto registrado (+ .gitkeep)
+│       └── <project>/                    # memoria por proyecto, materializada al registrar
+│           ├── assignments.md            # tablero de scheduling derivado
+│           ├── components.md             # registro de componentes reutilizables
+│           ├── lessons-learned.md        # incidentes permanentes por regla de negocio
+│           ├── metrics.md                # historial derivado de duración / tokens
+│           ├── reputation.md             # auditoría de revisión derivada
+│           ├── announcements/            # hallazgos de investigación horizontales
+│           ├── decisions/                # decisiones de arquitectura DEC-NNN
+│           ├── designs/                  # <Story-ID>.md diseños aprobados
+│           ├── events/                   # <Story-ID>.md progreso append-only
+│           ├── module-rules/             # reglas de módulos aceptadas por proyecto
+│           ├── objectives/               # memoria de breakdown de /new-objective
+│           ├── reviews/                  # <Story-ID>-*.md informes de revisión
+│           ├── signals/                  # señales horizontales
+│           └── stories/                  # borradores de trabajo de /new-story
 ├── modules/                              # módulos instalados, registro, reportes y salidas
 ├── docs/
 │   └── <project>/                        # documentación generada, cuando se solicita
 └── scripts/
     └── <project>/                        # scripts auxiliares de datos, cuando se solicitan
 ```
+
+El árbol de memoria `<project>/` no tiene template en disco: se materializa desde el esqueleto de
+[`.orchestrator/README.md`](.orchestrator/README.md) al registrar un proyecto, o cuando
+`/legion-upgrade` migra un checkout antiguo de un solo proyecto al layout multiproyecto.
 
 ## Licencia
 
