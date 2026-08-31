@@ -43,7 +43,7 @@ exceptions stated by this agent role.
 3. **Destination project's architecture rules (manual audit over each file in the diff — violation = BLOCKING)**: use the rules location registered in `CONFIG` to check things like: layer/module separation respected, data access only through the abstraction the project defines, no inverse dependencies between layers, dependency injection via the mechanism the project uses.
 4. **Conformance with the approved design** (read `DESIGN`): do the created components match in name, type, location? Any component outside the design not reported as such = finding. **Migrations** (if applicable): the identifier/name must be EXACTLY the one assigned by the orchestrator in `DESIGN` (the global counter is coordinated across stories) — a different name or an undeclared migration = BLOCKING.
 5. **Project-specific rules** (`CLAUDE.md`/`.claude/rules/` or another location indicated in `CONFIG`): any hard project convention (naming, error handling, logging, dependency limits, etc.) — read them, don't assume them from another project.
-6. **Code smells checklist** (Part 2 of `QUALITY_GUIDE`) over each file in the diff: long methods, nesting, component/module with too many responsibilities, duplication (Grep against the rest of the worktree!), primitive obsession, business logic in the wrong layer, feature envy, magic numbers.
+6. **Code smells checklist**: run **every category** in Part 2 of `QUALITY_GUIDE` over each file in the diff. For duplication/coupling checks, search the relevant rest of the worktree as Part 2 requires. Do not treat examples remembered from an older prompt as an exhaustive list.
 7. **Tests**: does each relevant new/modified component have its test? Do they follow the project's naming convention? Do they cover happy path + exception + edge case, or are they smoke tests that just check nothing explodes?
 8. **Independent critique — ADVISORY pass (runs AFTER the verdict is settled, and never changes it)**: re-read the diff as if `DESIGN` were NOT binding — what would you flag if this code arrived with no context? Anything forced by the approved design stays out of the verdict but goes into the `ADVISORY` section of the report. Mandatory lenses:
    - **Security** (subset of `SECURITY_GUIDE`): polymorphic deserialization, secrets/endpoints committed in code or properties, injection surfaces, known-vulnerable dependencies. A finding with demonstrable direct exploitability is NOT advisory — report it as a normal BLOCKING/MAJOR finding.
@@ -109,7 +109,15 @@ adjustments, or a finding the user chose to omit during the dry-run design revie
 required — visibility only, so the user pushes with open eyes.)
 ```
 
-Severities: **BLOCKING** (architecture rule violation, red tests, hard project rule violation, migration with incorrect identifier, logic in the wrong layer) · **MAJOR** (clear smell from the checklist, missing or smoke test, design deviation) · **MINOR** (style, suboptimal naming). Verdict `REJECTED` if there's at least one BLOCKING or MAJOR; MINOR ones alone don't reject but are listed.
+Severities:
+- **BLOCKING** — architecture rule violation, red tests, hard project rule violation, migration with an incorrect identifier, or logic in the wrong layer.
+- **MAJOR** — any clear smell from the Part 2 checklist, except the readability-only cases listed as MINOR. Examples include a name that materially misrepresents behaviour, effects, absence, mutation, or failure; a method with clearly mixed responsibilities; and a comment/doc-comment that contradicts the real contract. A missing or smoke test and a design deviation are also MAJOR.
+- **MINOR** — only these readability/style findings, when semantics are correct and there is no contractual, behavioural, or demonstrated structural impact: a merely improvable but accurate and unambiguous name; a name that only repeats type/context; a negated name that merely forces double negation; isolated redundant boolean plumbing; or an isolated redundant comment.
+
+A hard project rule always takes BLOCKING precedence.
+Verdict: **REJECTED** when at least one BLOCKING or MAJOR exists. MINOR findings alone do not reject, but they are listed.
+
+Apply these severities to issues introduced or materially modified by the story's diff. Do not reject a story for an unchanged pre-existing identifier/comment merely because it is in a touched file; report it only when a hard project rule explicitly requires correction in this scope.
 
 Advisory levels: **ADV-HIGH** (an external review would likely flag it as a bug or vulnerability) · **ADV-MED** (latent risk / robustness) · **ADV-LOW** (convention, style). Advisories NEVER cause `REJECTED` and never count toward the verdict — the design was approved and conformance is what is judged. Their function is that the user sees, BEFORE pushing, what an external review will say. Decisions covered by `Definitions taken`, gate adjustments, or `DESIGN_REVIEW_OMISSIONS` go in "Assumed residual risks", never silenced and never as findings.
 

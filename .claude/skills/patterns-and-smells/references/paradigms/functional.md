@@ -55,6 +55,8 @@ A function with more than 3-4 parameters, or a pipeline with unrelated steps mix
 
 ## Smell vocabulary (functional equivalents of the classic OOP smells)
 
+- **Ambiguous name on a transformation** — a pure transformation whose name doesn't say what it produces, or a function whose name hides that it performs effects (IO, state) alongside the transformation. Predicates read as questions (`is…`/`has…` where idiomatic); constructors/smart-constructors use the ecosystem's convention (`mk…`, `make…`, `of…`). Verify against the codebase.
+- **Comment noise** — header/doc comments that restate the signature or the type. Keep only the non-obvious information (a law the function must satisfy, a totality/partiality note, a performance trade-off).
 - **Function that does too much** (equivalent to "god class"): mixes fetch + calculation + persistence in the same `do`/block.
 - **A function uses more data from another module than its own** (equivalent to "feature envy"): move it to that module.
 - **The same 3+ values travel together as loose parameters** (equivalent to "data clumps"): group them into a named record/tuple.
