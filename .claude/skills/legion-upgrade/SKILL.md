@@ -3,7 +3,7 @@ name: legion-upgrade
 description: Migrates a pre-multiproject Legion installation after Git has updated the checkout. It resumes the singleton-to-multiproject bootstrap and never updates Git or installed modules.
 ---
 
-Read `CLAUDE.md` first — the project-resolver table under "Required bootstrap for an older
+Read `CLAUDE.md` first — the table in `.orchestrator/bootstrap-contract.md` under "Required bootstrap for an older
 installation" is this command's contract, and `.orchestrator/migration-contract.md` is the single
 schema/state-machine source this skill implements. This skill orchestrates that contract; it does
 not repeat or contradict either document.
@@ -25,7 +25,7 @@ is `git worktree move`, confirmed and only as described in "5. Publish".
 
 ## Behavior by state
 
-Apply `CLAUDE.md`'s project-resolver table directly. Its rows are not first-match-wins in list
+Apply `.orchestrator/bootstrap-contract.md`'s project-resolver table directly. Its rows are not first-match-wins in list
 order — an invalid catalog blocks regardless of marker state, so check catalog validity before
 acting on any marker:
 

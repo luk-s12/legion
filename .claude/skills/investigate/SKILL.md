@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate

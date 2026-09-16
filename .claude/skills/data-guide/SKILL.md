@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -55,7 +55,7 @@ The problem this part solves: a migration that looks fine in the worktree can br
 1. **Before designing**: read the project's real schema (existing tables/collections, relationships, column/index naming convention) and the migration tool + ordering rule from `CONFIG`.
 2. **While designing**: declare each migration per Part 1, and for each, whether it has risk to real data (Part 2) and its rollback plan. Report `DESIGN_PROPOSED` — the Orchestrator assigns the final identifier, you never choose it yourself.
 3. **While implementing**: the migration with the EXACT assigned identifier, plus any backfill script the story requires, complying with Part 2.
-4. **When reporting `FINALIZED`**: list blocking findings and warnings separately (with their evidence), same as `security-guide`. If there are blockers, the story **is not ready** — the Orchestrator decides how to resolve it. You never decide on your own that the story stays blocked indefinitely.
+4. **When reporting `IMPLEMENTATION_DONE`**: list blocking findings and warnings separately (with their evidence), same as `security-guide`. If there are blockers, the story **is not ready** — the Orchestrator decides how to resolve it. You never decide on your own that the story stays blocked indefinitely.
 
 ## Use by the Orchestrator
 

@@ -1,6 +1,6 @@
 # Migration contract for `/legion-upgrade`
 
-Single normative schema and state machine for a singleton → multiproject migration. `CLAUDE.md`'s
+Single normative schema and state machine for a singleton → multiproject migration. `.orchestrator/bootstrap-contract.md`'s
 project-resolver table and `.claude/skills/legion-upgrade/SKILL.md` delegate all of this here instead
 of repeating it — two documents describing the same contract in different prose is the "second
 resolver" this repository forbids elsewhere.

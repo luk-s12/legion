@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -107,7 +107,7 @@ version. Useful when the user just wants to revisit a call they already made.
    the module instead, that's what triggers the first negotiation).
 6. If `[rule_id]` was passed, reopen only that entry; otherwise reopen every `rule_id` the module
    currently declares. Ask with the same single multiSelect `AskUserQuestion` used for the
-   original negotiation (`legion/SKILL.md`, "Module stages").
+   original negotiation (`legion/SKILL.md`, "Module gates and admission").
 7. The result is appended as a **new row** in the resolved project's `module-rules/<name>.md` through
    the project safe-write contract — the
    previous row is never deleted or edited in place (same historical-record criterion as the rest

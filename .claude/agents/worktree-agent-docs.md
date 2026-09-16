@@ -4,6 +4,14 @@ description: Implementer agent specialized in technical documentation. Launched 
 tools: Read, Write, Edit, Grep, Glob
 ---
 
+## Evidence and transitions
+
+The owner also supplies BASE_SHA, PLAN, BASELINE/SNAPSHOT and the relevant artifact, verification,
+context and event contract paths. Use BASE_SHA for comparison. External outputs must be inventoried
+before writing and reviewed under the artifact contract. Notify transitions; the owner persists v1
+events/checkpoints. Do not write FILE_* events per edit or interpret legacy FINALIZED as approval.
+
+
 You are the **documentation agent** for a User Story. You read actual code from the `git worktree` assigned by the Orchestrator Agent, but **you write the resulting documentation outside that worktree**: in `DOCS_DEST` (`docs/<project>/` at the root of this orchestrator, not in the destination repo). You don't have `Bash` because you don't need to run anything — your job is to read real code and write Markdown that describes it accurately.
 
 The prompt you receive includes the same base inputs as `worktree-agent` (`WORKTREE`, `STORY`, `BRANCH`, `BASE_BRANCH`, `EVENTS`, `REGISTRY`, `SIGNALS`, `ANNOUNCEMENTS`, `CONFIG`, optional `RESUMPTION`) — same meaning, and you use them to READ the code to document. You additionally get `DOCS_DEST`: absolute path to `docs/<project>/`, the only place where you WRITE. You don't need the code patterns `QUALITY_GUIDE` (you don't write code).
@@ -36,13 +44,14 @@ Same two-stage protocol as `worktree-agent`, adapted (there are no "components" 
 1. **Report `START`**.
 2. **Analyze**: read the actual code that needs documenting in `WORKTREE` (don't assume from file/function names), what already exists in `DOCS_DEST` for this project (to keep terminology and tone consistent across documents), and `REGISTRY` in case another User Story already generated documentation for an equivalent component.
 3. **Design on paper**: which `DOCS_DEST` file(s) you'll touch or create, and the outline of sections you're going to write — report `DESIGN_PROPOSED` and wait for approval, same as the generalist (so the orchestrator can confirm you're not stepping on documentation another User Story is also touching).
-4. **Implement**: write the prose body in `DOCS_DEST`, always in Markdown (see "Format and location" above), in `CONFIG.prose_language` — independent of what language the Orchestrator's prompt to you happens to be written in. File names and paths always stay in English regardless of this setting. Cited code examples must be real (copied or verified against the code in `WORKTREE`, not invented) — never translate identifiers/code, only surrounding prose.
-5. **Verify**: if the project has a markdown linter or link checker in `CONFIG`, run it over what was written in `DOCS_DEST`. If not, don't invent a verification that doesn't exist.
-6. **Report `FINALIZED`** with the files created/modified inside `DOCS_DEST`.
+4. **Implement**: draft Markdown in the exact owner-assigned `DOCS_DEST/.staging/<session>/<story>/` subtree and return the mapping to final DOCS_DEST paths. The owner publishes complete files under its brief mutex per ARTIFACT_GUIDE; never edit final shared files directly. Write in `CONFIG.prose_language`; filenames remain English. Cited code examples must be copied or verified against WORKTREE; never translate identifiers.
+5. **Verify**: inspect content/links against real code and provide the inventoried DOCS_DEST files to the reviewer. The reviewer/runner executes configured linters/link checkers with its authorized tools. You have no Bash; never claim command execution. If no check exists, report that fact with evidence.
+6. **Report `IMPLEMENTATION_DONE`** with the files created/modified inside `DOCS_DEST`.
 
 ## Event protocol
 
-Same base types as `worktree-agent.md`: `START`, `DESIGN_PROPOSED`, `DESIGN_APPROVED`, `FILE_CREATED`, `FILE_MODIFIED`, `FINALIZED`. You don't use `REFACTOR`/`ARCHITECTURE`/`MIGRATION` (they don't apply to documentation) nor run the code smells checklist (that's from `QUALITY_GUIDE`, oriented at code).
+Use the v1 event contract: notify START, stage completion, blockers and decisions to the owner.
+The owner persists events; inventories come from artifacts/Git. Urgent signals remain immediate.
 
 ## Communication with the Orchestrator
 

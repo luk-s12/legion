@@ -6,7 +6,7 @@ authority; each project's memory lives under `.orchestrator/projects/<project>/`
 ## Global files
 
 - `projects.yml`: versioned project catalog. An empty or missing catalog never defaults to
-  first-project registration by itself — apply exclusively `CLAUDE.md`'s project-resolver table
+  first-project registration by itself — apply exclusively `.orchestrator/bootstrap-contract.md`'s project-resolver table
   under "Required bootstrap for an older installation" (empty and missing resolve differently) and
   `/legion-upgrade`.
 - `projects-schema.md`: compact schema, validation and path-containment rules.
@@ -15,7 +15,9 @@ authority; each project's memory lives under `.orchestrator/projects/<project>/`
   is no on-disk template — the skeleton below is the authoritative source, materialized fresh when a
   project is registered or migrated with `/legion-upgrade`.
 - `runtime-contract/README.md`: minimal catalog/project/story locking contract.
-- `runtime/`: ignored ephemeral owners and story claims.
+- `runtime/`: ignored owners, claims, staging, content-addressed artifact bytes and isolated integration trees.
+- `artifact-contract.md`, `verification-contract.md`, `event-contract.md`, `context-contract.md`,
+  `integration-contract.md`, `worktree-contract.md`: operation-specific evidence and lifecycle contracts.
 
 ## Project memory skeleton
 
@@ -34,7 +36,7 @@ a `.gitkeep`).
 ├── announcements/          # <ID>.md horizontal research findings
 ├── decisions/              # DEC-NNN.md architectural conflict decisions
 ├── designs/                # <Story-ID>.md approved design and dry-run state
-├── events/                 # <Story-ID>.md append-only agent progress
+├── events/                 # legacy <Story-ID>.md plus <Story-ID>/<event-id>.json v1
 ├── module-rules/           # per-project accepted module rules
 ├── objectives/             # /new-objective breakdown memory
 ├── reviews/                # <Story-ID>-*.md design / code review reports
@@ -48,12 +50,19 @@ a `.gitkeep`).
 - `components.md`: orchestrator-owned reusable component registry.
 - `lessons-learned.md`: permanent incidents for the selected codebase.
 - `metrics.md` and `reputation.md`: derived, informational audits.
-- `events/<Story-ID>.md`: append-only agent progress.
+- `events/<Story-ID>.md`: read-only legacy history; new transitions are `events/<Story-ID>/<id>.json`.
 - `designs/<Story-ID>.md`: approved story design and dry-run state.
 - `reviews/<Story-ID>-*.md`: design/code review reports.
 - `decisions/DEC-NNN.md`: architectural conflict decisions.
 - `signals/<ID>.md` and `announcements/<ID>.md`: unique horizontal records.
 - `objectives/`, `stories/`, `module-rules/`: project-scoped command memory.
+
+The original registration/migration skeleton above is unchanged for compatibility. Helpers lazily
+add `plans/`, `artifacts/`, `approvals/`, `verification/`, `checkpoints/`, `module-runs/`, `integration/`
+as needed; context indexes live under `runtime/context/`. These versioned records are evidence,
+never another project catalog.
+Reviewer JSON receipts accompany their Markdown reports. Runtime object bytes are required to
+reconstruct snapshots; retain them locally while evidence refers to them.
 
 ## Authority and writes
 
@@ -70,5 +79,9 @@ claims.
 A batch is only a planning view. Each story reservation independently revalidates dependencies,
 conflicts and `max_parallel` while holding the project mutex.
 
-Signals and Announcements are the only agent-authored shared records besides assigned event/review
-files. The orchestrator decides promotions and project decisions under the project mutex.
+Signals, Announcements and assigned review/verification evidence are agent-authored within their
+declared zones. The owner persists transition events, checkpoints and shared publications under
+the project mutex. Independent approval is snapshot-bound; IMPLEMENTATION_DONE/QA_DONE and legacy
+FINALIZED never substitute for review. Code dependencies wait for content in the pinned base.
+
+See [helper usage](../tools/harness/README.md) and [validation results](benchmarks/README.md).

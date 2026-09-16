@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -50,7 +50,7 @@ For every file touched or indicated by the story, check against these categories
 
 1. **Before auditing**: check the destination repo's real rules and resolved verification facts for framework/stack security quirks.
 2. **While auditing**: go through Part 1 on the files in the indicated zone. For each finding, classify it with Part 2 and note the evidence (file/line + exploitability, or the reason it stays a warning).
-3. **When reporting `FINALIZED`**: list blocking findings and warnings separately (with evidence). If there are blockers, the story **is not ready** — the Orchestrator decides how to resolve it (order a narrow fix, escalate to the implementer if it exceeds your scope, or bring it to the user if there's no way to unblock it in a few rounds). You never decide on your own that the story stays blocked indefinitely — you report, the Orchestrator resolves.
+3. **When reporting `IMPLEMENTATION_DONE`**: list blocking findings and warnings separately (with evidence). If there are blockers, the story **is not ready** — the Orchestrator decides how to resolve it (order a narrow fix, escalate to the implementer if it exceeds your scope, or bring it to the user if there's no way to unblock it in a few rounds). You never decide on your own that the story stays blocked indefinitely — you report, the Orchestrator resolves.
 
 ## Use by the Orchestrator
 

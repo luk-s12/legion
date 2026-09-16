@@ -32,7 +32,7 @@ modules/
 ├── reports/            # results namespaced by module and project — written by the module's own agent
 │   └── <module-name>/
 │       └── <project>/
-│           ├── <Story-ID>-Rn.md   # type: gate — one file per rejection round
+│           ├── <Story-ID>-<stage>-Rn.md # type: gate — stage and round identity
 │           └── <timestamp>.md     # type: generator — no Story-ID/round
 └── output/             # stable artifacts a type: generator module produces, gitignored (regenerable)
     └── <module-name>/
@@ -49,7 +49,7 @@ release the verified lock. They never hold a project mutex simultaneously.
 the module's own agent writes ITS OWN report there directly (it has the real execution detail —
 the orchestrator only reads it afterward to safely update the selected project's
 `.orchestrator/projects/<project>/metrics.md`, never a competing report; see
-`run-module/SKILL.md` "Report" and `legion/SKILL.md` "Module stages"). The one
+`run-module/SKILL.md` "Report" and `legion/SKILL.md` "Module gates and admission"). The one
 exception on `installed/`, same as everywhere else in Legion: the module's own agent writes
 **inside its own `modules/installed/<name>/` clone** during development of the module itself
 (that's the module author's business, done outside of any orchestration run) — never during a
@@ -165,6 +165,23 @@ provides_rules: rules.md                  # optional — path inside the module'
 # Module: integration-testing
 ```
 
+## Gate admission and evidence
+
+`max_concurrent` is per module **per project**, shared across Claude sessions. Before launch,
+the owner reserves via module-admission under the existing project.lock. An omitted limit resolves
+to 1 when writes_to is nonempty, otherwise null (explicit unlimited). RUNNING records at
+`.orchestrator/projects/<project>/module-runs/<module>/<run>.json` count until their owner finishes
+or explicitly reconciles them. Never derive capacity from missing report files or local counters.
+Changing a limit while runs are active requires reconciliation. External global resources need
+their own declared coordination; this per-project admission does not protect them globally.
+
+Run IDs and reports include story, stage and attempt. Legacy `<Story-ID>-Rn.md` reports remain
+read-only history. Revalidate legacy evidence before accepting it for a current artifact snapshot.
+Any gate that writes must finish before final candidate capture and core review; capture a new
+candidate if a later gate changes bytes. Gates never replace independent core review.
+See [runtime coordination](../.orchestrator/runtime-contract/README.md) and
+[artifact evidence](../.orchestrator/artifact-contract.md).
+
 ## Skills and rules a module brings (`provides_skills`/`provides_rules`)
 
 A `type: gate` module can, in addition to (or instead of) verifying a story, contribute content
@@ -175,7 +192,7 @@ applied to a story that doesn't ask for it.
 - **`provides_skills`** — procedural guidance (a checklist, a How-to), in the exact same format
   as `.claude/skills/<name>/SKILL.md`. Referenced **wholesale** by the implementing agent, same
   authority as `QUALITY_GUIDE`/`SECURITY_GUIDE`/`DATA_GUIDE` today. Never negotiated item by
-  item — the existing convention cross-check at the design gate (`legion/SKILL.md`, "Module stages")
+  item — the existing convention cross-check at the design gate (`legion/SKILL.md`, "Module gates and admission")
   is the filter: an inherited detail with no reason to exist in this project doesn't enter a code
   fragment just because a module's skill suggested it.
 - **`provides_rules`** — punctual, rule-shaped statements (closer to an entry of
@@ -185,7 +202,7 @@ applied to a story that doesn't ask for it.
 
 Neither field ever requires `Write`/`writes_to` — both are content read via `Read` by a native,
 trusted agent. A module that only declares these two fields (no gate function at all) is still a
-valid `type: gate` module: it simply never produces a `modules/reports/<name>/<project>/<Story-ID>-Rn.md`
+valid `type: gate` module: it simply never produces a `modules/reports/<name>/<project>/<Story-ID>-<stage>-Rn.md`
 verdict, only augments.
 
 ### `rules.md` format (what `provides_rules` points to)
@@ -223,7 +240,7 @@ premature: at that point it isn't known yet which project(s) the module will be 
 
 So negotiation is **lazy, per project**: it's triggered by `/legion`, the first time a story of
 the **current project** (per `.orchestrator/projects.yml`) references a module with
-`provides_rules` — see `legion/SKILL.md`, "Module stages". A single
+`provides_rules` — see `legion/SKILL.md`, "Module gates and admission". A single
 `AskUserQuestion` (multiSelect, one call, regardless of how many rules the module proposes) asks
 accept/reject for every rule, with a prior best-effort cross-check (the orchestrator reading and
 reasoning against `architecture_rules_location`/`patterns_guide_location` — not a grep scan)
@@ -244,7 +261,7 @@ its own real rules.
 
 - **Re-negotiation by version**: when a module is updated and its `rules.md` changes, only the
   `rule_id`s that are new or whose statement changed get re-negotiated (per project that already
-  negotiated them) — the rest keep their existing verdict. See `legion/SKILL.md`, "Module stages"
+  negotiated them) — the rest keep their existing verdict. See `legion/SKILL.md`, "Module gates and admission"
   (version/contract check). That check is **hash-based, not `git fetch`-based**: `modules/
   installed/<name>/` is a plain copy on purpose (see "Installing / removing a module" below), so there's no
   `.git` there to fetch against. `/new-module` records a content hash of the module's own files
@@ -264,7 +281,7 @@ its own real rules.
 
 If a story has 2+ modules with `provides_rules` active (or a module's rule conflicts with a real
 rule of the project — see `plan-module-implementer.md` for the `core`-vs-module case), the design
-gate (`legion/SKILL.md`, "Module stages") resolves it with `AskUserQuestion` — three possible
+gate (`legion/SKILL.md`, "Module gates and admission") resolves it with `AskUserQuestion` — three possible
 resolutions: rule A wins, rule B wins, or apply both (when they only looked contradictory in the
 textual detection, not in practice). The resolution is persisted in `_conflicts.md` above,
 namespaced per project, so the same pair never gets asked twice in the same project — each row
@@ -340,13 +357,13 @@ any module gets, with no technical sandbox behind it (same disclosed limitation 
 else in this trust model). What Legion verifies after the fact has to be split by what's actually
 checkable, not stated as a single blanket guarantee:
 
-- **`workspace/<repo_dir>`** (the single base clone): before/after `git status --porcelain`. Any
+- **`workspace/<repo_dir>`** (the single base clone): before/after status plus content/index fingerprints, including untracked files. Any
   diff is a hard incident — nothing legitimate touches this clone while a story is being
   implemented (same pattern already used for `type: generator` with `scope: base-repo`).
 - **Every *other* worktree that exists at launch time, with no agent currently active on it**
   (per `assignments.md` — `finalized`/`queued`/`aborted`, same "no active agent" criterion
   `/run-module`'s `worktree:<Story-ID>` targeting already uses): checked exactly as hard as the
-  base repo — before/after `git status --porcelain`, any diff is an incident. Nothing legitimate
+  base repo — before/after status plus content/index fingerprints; an unchanged dirty-status entry does not prove unchanged bytes. A diff is an incident. Nothing legitimate
   should be touching an idle worktree either.
 - **Every *other* worktree with an agent actively running on it during the same window** (a
   sibling story genuinely being worked on in parallel — the normal case whenever
@@ -356,19 +373,17 @@ checkable, not stated as a single blanket guarantee:
   progressed," because `git status` reports accumulated state, not which process caused it. A
   check that ignored this would either misfire constantly (false incidents on completely normal
   parallel work) or get silently disabled/ignored in practice to stop the noise — both worse than
-  admitting the gap. Instead: if that worktree's status changed during the window, cross-reference
-  the changed paths against that sibling story's own `.orchestrator/projects/<project>/events/<Story-ID>.md`
-  (`FILE_CREATED`/`FILE_MODIFIED` events timestamped inside the same window). Fully explained by
-  its own reported events → nothing to do, expected. Anything left unexplained → **not** an
-  automatic incident (the evidence is ambiguous, unlike the two hard cases above) — log it as a
-  `LOW`-severity note in `modules/reports/<module-name>/<project>/<Story-ID>-Rn.md` for the orchestrator to
-  triage manually, same posture as any other ambiguous finding in this system.
+  admitting the gap. Instead, compare changed paths/content fingerprints with the sibling's
+  reserved resources, checkpoint and available artifact evidence. Transition events are not
+  per-file attribution and cannot prove which process wrote a file. Unexplained changes remain
+  ambiguous: record a `LOW`-severity note in
+  `modules/reports/<module-name>/<project>/<Story-ID>-<stage>-Rn.md` for owner triage. Preserve
+  legacy FILE_* events as history without depending on new ones being emitted.
 - A worktree that didn't exist yet at launch time is out of scope by construction — the module
   only ever runs against its own, already-provisioned worktree.
 - **Never auto-selected**: an `implementer` module only ever runs because a story explicitly asks
   for it — `## Subtasks: 1. [implementer:<module-name>] <description>` in
-  `requirements/<project>.md` (see `new-story/SKILL.md` and `CLAUDE.md`, "Agent selection per
-  story"). The orchestrator's automatic agent-selection rule only ever picks between native
+  `requirements/<project>.md` (see `new-story/SKILL.md` and `CLAUDE.md`, "Agent lifecycle"). The orchestrator's automatic agent-selection rule only ever picks between native
   agents — it never reaches for an installed module on its own.
 - **Same design gate, no shortcuts**: the module's agent submits its own `DESIGN_PROPOSED` for
   its subtask and goes through the same barrier as any other implementer — no exception for being

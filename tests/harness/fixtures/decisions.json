@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "action_vocabulary": {
+    "version": 1,
+    "labels": {
+      "REJECT": "Reject a reviewed design or delivery because a demonstrated defect requires correction. This is a review verdict, not a generic refusal to launch or perform an operation.",
+      "REVALIDATE": "Obtain fresh evidence or review because the available approval no longer establishes the current artifact state. Stale evidence alone does not establish a defect in the changed content.",
+      "WAIT": "Defer scheduling or an operation until its required prerequisite, capacity or authorization is established. This can require human reconciliation rather than automatic retry; it is not a verdict rejecting the delivery's quality.",
+      "REUSE": "Continue with the existing worktree after its identity, containment and ownership have been verified, preserving saved work.",
+      "APPROVE": "Accept the current reviewed delivery when required criteria and evidence are satisfied and no rejecting defect is established. This does not independently grant scheduling capacity or ownership."
+    }
+  },
+  "cases": [
+    {"id":"design-defect","expected":"REJECT","scenario":"A checkout story requires totals in cents. Approved design says to divide cents by 100 twice before charging. Implementation follows it exactly. A concrete trace at src/charge.js:8 shows a 10000-cent order charged 100 cents. Existing tests pass because they copied the design. No user accepted this risk. Independent reviewer must decide whether this is merely an advisory or a rejecting defect."},
+    {"id":"stale-new-file","expected":"REVALIDATE","scenario":"A reviewer approved a candidate including an untracked file src/new.js. After review, the file bytes changed, while tracked git diff stayed the same. The owner is about to release the story as approved. Decide whether the approval can stand."},
+    {"id":"unintegrated-code","expected":"WAIT","scenario":"Story B explicitly needs Story A's newly implemented function. A is independently reviewed and uncommitted in its own worktree. The selected base for B lacks the function. No harvesting, copying or merging was authorized. Capacity is available. Decide whether B can start implementing."},
+    {"id":"reuse-worktree","expected":"REUSE","scenario":"Resuming the same session's claimed story: its canonical namespaced directory exists, Git registers the matching branch/path, physical containment and ownership are verified, and saved work is present. No new worktree is needed. Decide whether existence alone prevents reuse."},
+    {"id":"external-docs-defect","expected":"REJECT","scenario":"A docs-only story has zero worktree diff and all checks pass. Its inventoried external docs/shop/api.md:10 falsely states an endpoint accepts unauthenticated writes; reading the actual endpoint proves authentication mandatory. Its acceptance criterion requires accurate authentication documentation. Decide the independent review verdict."},
+    {"id":"style-only","expected":"APPROVE","scenario":"All acceptance criteria and required independent checks pass for a current complete snapshot. Only finding: an accurate unambiguous local variable name could be shorter. No hard project rule, security issue, contractual or behavioral consequence exists. Decide whether this alone rejects the story."},
+    {"id":"incomplete-claim","expected":"WAIT","scenario":"Project max_parallel is 1. Another session's story lock directory exists but owner.md is missing after a process crash. The worktree might contain unsaved changes. No human takeover decision exists. Decide whether a new story can automatically consume that place."}
+  ]
+}

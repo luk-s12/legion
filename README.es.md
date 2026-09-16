@@ -25,13 +25,18 @@ flowchart LR
     W --> V["Verificación"]
     V --> R["Revisión independiente"]
     R -->|Correcciones| W
-    R -->|Aprobado| T["Trial merge"]
+    R -->|Aprobado| T["Integración temporal verificada"]
     T --> E["Ramas listas<br/>para cosechar"]
 ```
 
 **Vos describís el resultado. Legion administra la cola, el aislamiento, los gates de diseño, los especialistas, la verificación y la revisión. Vos conservás el control de commits, pushes y PRs.**
 
 ## Inicio rápido
+
+Requiere **Claude Code, Git y Node.js 22+**. El runtime no necesita dependencias npm.
+La [guía de helpers](tools/harness/README.md) explica uso y recuperación; el
+[reporte de validación](.orchestrator/benchmarks/README.md) distingue lo probado de las mediciones
+de rendimiento pendientes. El harness sigue siendo exclusivo de Claude Code.
 
 ### 1. Agregá tu proyecto
 
@@ -91,9 +96,15 @@ Legion no commitea, pushea ni crea PRs. No borres un worktree antes de commitear
 6. **Implementa y verifica** con los comandos y convenciones reales del proyecto destino.
 7. **Ejecuta una revisión adversaria independiente;** lo rechazado vuelve a corrección, hasta tres rondas antes de escalar.
 8. **Rota la cola** cuando se libera capacidad, respetando conflictos de código y dependencias explícitas.
-9. **Comprueba el resultado combinado** con controles de consistencia y un trial merge antes de cerrar.
+9. **Comprueba el resultado combinado** materializando snapshots aprobados en un directorio temporal aislado y ejecutando los checks de integración requeridos.
 
 Cada proyecto tiene su propio techo `max_parallel`. Los claims se cuentan bajo el mutex breve del proyecto, por lo que dos sesiones no pueden tomar a la vez el último lugar disponible. La cantidad de historias en cola no tiene límite.
+
+La aprobación identifica el commit base, archivos, índice Git y docs/scripts externos revisados.
+Si cambian, la evidencia se revalida. Las dependencias de código esperan hasta estar integradas en
+la base de quien las necesita. Los eventos por transición y checkpoints reemplazan la narración
+por archivo. El contexto se ajusta al alcance y riesgo; la revisión independiente y los checks
+obligatorios se mantienen. La caché de resultados de tests permanece desactivada.
 
 ## Elegí el comando correcto
 

@@ -35,7 +35,7 @@ Rules:
 - When `remote` is present, the sanitized repository remote must match it. Credentials are never
   stored or displayed.
 - An empty or missing catalog does not by itself mean a fresh installation — a clean `git pull`
-  onto a pre-multiproject checkout leaves an empty catalog behind. Resolve with `CLAUDE.md`'s
+  onto a pre-multiproject checkout leaves an empty catalog behind. Resolve with `.orchestrator/bootstrap-contract.md`'s
   project-resolver table: legacy evidence, on either state, routes to `/legion-upgrade`'s
   copy-first bootstrap. Without legacy evidence, an **empty** catalog routes to guided
   registration, but a **missing** one blocks as an incomplete/damaged installation — a missing

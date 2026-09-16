@@ -1,6 +1,6 @@
 ---
 name: patterns-and-smells
-description: Design quality and code-smell detection guide, agnostic of language and paradigm (object-oriented, functional, imperative/procedural; works for frontend and backend). Agents in every worktree MUST apply it before implementing and before reporting FINALIZED, so that no User Story produces ugly or divergent code. The orchestrator uses it as a tiebreaker in architectural decisions.
+description: Design quality and code-smell detection guide, agnostic of language and paradigm (object-oriented, functional, imperative/procedural; works for frontend and backend). Agents in every worktree MUST apply it before implementing and before reporting IMPLEMENTATION_DONE, so that no User Story produces ugly or divergent code. The orchestrator uses it as a tiebreaker in architectural decisions.
 ---
 
 Mandatory design-quality guide for all worktrees in this project. It complements (never contradicts) `CLAUDE.md` and the base repo's own rules — in case of conflict, the project's rules win.
@@ -119,9 +119,9 @@ The smell is the same in any paradigm — "the error gets lost or says nothing u
 
 ## Application protocol (mandatory for every agent)
 
-1. **Before implementing**: read the `references/paradigms/` file(s) (and `references/frontend/<framework>.md` if applicable) that match the project, choose the approach per Part 1, and report an `ARCHITECTURE` event stating the chosen approach and the problem it solves (the orchestrator compares it across worktrees).
+1. **Before implementing**: read the `references/paradigms/` file(s) (and `references/frontend/<framework>.md` if applicable) that match the project, choose the approach per Part 1, and report an `DECISION` notification to the owner stating the chosen approach and the problem it solves (the orchestrator compares it across worktrees).
 2. **During**: for every extraction/refactor due to a smell, report a `REFACTOR` event naming the smell (e.g.: "extracted function `x` due to duplicated calculation in 2 components").
-3. **Before reporting `FINALIZED`**: run the full Part 2 checklist over all created/modified files and fix whatever shows up. The `FINALIZED` event must declare: "smells checklist applied: no findings" or list the refactors done.
+3. **Before reporting `IMPLEMENTATION_DONE`**: run the full Part 2 checklist over all created/modified files and fix whatever shows up. The `IMPLEMENTATION_DONE` event must declare: "smells checklist applied: no findings" or list the refactors done.
 
 ## Use by the Orchestrator
 

@@ -1,200 +1,120 @@
----
+﻿---
 name: legion
-description: Orchestrates project-scoped User Stories with one worktree per story, simple cross-session claims, design approval, implementation and adversarial review.
+description: Orchestrates project-scoped stories with isolated worktrees, verified claims, proportional design and independent snapshot-bound review.
 ---
 
 # /legion
 
-Arguments: `/legion --project <slug> [--story <ID>] [dry-run]`. If project is not supplied, ask
-the user to select one. `--story` is a preference, never a bypass for capacity, dependency or
-conflict checks.
+Arguments: /legion --project <slug> [--story <ID>] [dry-run]. Reuse the explicit project;
+ask only when identity is missing or ambiguous. --story never bypasses readiness or capacity.
+Read CLAUDE.md, then the normative contracts for each operation. Helpers use Node 22+ and Git;
+see tools/harness/README.md. Do not implement destination code in the owning session.
 
-Read `CLAUDE.md` first. Its project resolver, bootstrap, lock and safe-write contracts are
-mandatory. The catalog entry is the sole project configuration. Never discover a singleton repo or
-read old root memory after multiproject setup.
+## Resolve and reconstruct
 
-If a completed `/legion-upgrade` marker shows retained (non-archived) legacy originals for this
-project, mention it once per session — they are a passive backup only, never a fallback source to
-read from or write through (`.orchestrator/migration-contract.md`, "Archival").
+1. Validate catalog and markers. The normative bootstrap table is in
+   .orchestrator/bootstrap-contract.md. On a valid populated catalog without pending markers,
+   proceed normally; otherwise follow that table and migration-contract.md, without fallback.
+2. Resolve requirements, project memory, repo and namespaced worktrees. Validate physical paths,
+   optional sanitized remote and refs. Fetch origin if present; ask before pull --ff-only;
+   do not merge/rebase on the user's behalf. Pin BASE_SHA to the selected base commit.
+3. Run diagnose. Reconcile claims, worktrees by branch, requirements, legacy events and review
+   evidence. Only own claims may be resumed. Incomplete claims consume capacity; do not recreate
+   or steal one. Legacy paths require the approved migration mapping and explicit reconciliation.
+4. Consult relevant capabilities, module registry, components/decisions/lessons and alerts. Use
+   source-versioned context packets instead of reading unrelated story histories or full logs.
 
-## Resolve
+## Plan and reserve
 
-1. Run `CLAUDE.md`'s project resolver and obey the action returned by its single normative table.
-   Do not independently interpret catalogs, markers, or legacy evidence and never continue on old
-   paths.
-2. After that resolver authorizes project operation, resolve:
-   - requirements: `requirements/<project>.md`;
-   - memory: `.orchestrator/projects/<project>/`;
-   - repo: `workspace/<repo_dir>`;
-   - worktree: `workspace/worktrees/<project>/<Story-ID>` (nested: one per-project parent, the
-     Story ID directly inside it, no `--`). Recognize an existing worktree **by branch**
-     (`<branch_prefix>/<Story-ID>`) against real `git worktree list --porcelain`, not only the
-     nested path just calculated — this also covers a `--` or singleton worktree from an older
-     `/legion-upgrade` and a `deferred` legacy worktree from a completed marker's approved mapping,
-     which stays corroborating evidence, not the sole channel. If a worktree already exists for that
-     branch in any layout, reconcile inside it; never create a second one. Writing through a legacy
-     path requires the normal claim plus an explicit reconciliation confirmation; read-only
-     observation is the default;
-   - branch: `<branch_prefix>/<Story-ID>`;
-   - docs/scripts/module output: namespaces derived from the selected project.
-3. Revalidate that the repo is Git, physically contained in `workspace/`, and matches optional
-   sanitized remote. A failure blocks only this project.
-4. Fetch origin before planning when present. Never pull automatically; ask before `--ff-only`.
-   Divergence is a user-resolved blocker.
-5. Read requirements, project assignments/components/lessons/designs/decisions/signals/
-   announcements, capabilities, module registry and real Git worktree state.
+Analyze affected resources and dependencies; reuse analysis only while its source hashes match.
+Capture .orchestrator/projects/<project>/plans/<Story-ID>.json using artifact-contract.md:
+version, project, story, base_sha, requirements_sha256, sources, resources, dependencies, checks.
+Resources include external docs/scripts. Unknown scope reserves the whole repo conservatively.
+Classify each Depends on edge as order/code with design evidence. Code absent from the base means
+WAITING_INTEGRATION; do not claim or recreate the prerequisite implementation.
 
-## Resume and reconstruct
+Use reserve once for each eligible story. It revalidates plan sources, requirements, dependencies,
+conflicts and max_parallel under project.lock, publishes the durable claim and updates assignments.
+QUEUED is a wait state, not a reason to spin. LOCK_BUSY gets bounded retry on a subsequent useful
+notification or a user-visible wait/cancel decision; never take over by age. No batch barrier.
 
-Git and the story diffs are authoritative. Rebuild inconsistent assignment rows from requirements,
-story claims, events, reviews and `git worktree list`. A worktree with no claim is not an active
-writer and consumes no capacity. A claim with missing/invalid `owner.md` is incomplete: show its
-evidence and require a manual decision; never infer takeover from age.
-
-A session resumes only claims whose `owner.md.session_id` it owns. It may observe other worktrees
-read-only but cannot launch, message or write through their agents.
-
-## Plan view
-
-Analyze all queued stories for impacted modules, entities, endpoints and migrations. Build the
-conflict graph and dependency edges and show a batch view for priority/readability. A batch is not a
-barrier. Every story reservation independently revalidates requirements, dependency status,
-conflicts and capacity under the project mutex.
-
-Use `.orchestrator/capabilities.md` to select the generalist/specialist. Explicit `## Subtasks`
-run sequentially in the same worktree. Installed implementer modules activate only when named by a
-subtask. Risky zones may run `research-agent` first.
-
-## Reserve one story
-
-1. Outside locks, choose the next apparently eligible story; `--story` only biases this choice.
-2. Prepare a complete project-lock owner candidate with session, command, project and UTC time.
-3. Atomically create `.orchestrator/runtime/<project>/project.lock`. If it exists, show owner and
-   let the user wait, cancel or explicitly resolve it; never steal it.
-4. Rename the verified candidate to `owner.md` and reread it.
-5. Reread requirements, assignments and claims; reconcile them with Git.
-6. Treat incomplete claims conservatively as capacity until manually resolved — including a valid
-   claim whose resolved nested `worktree` is not yet registered in `git worktree list --porcelain`
-   (matched by branch): it holds its place, is never recreated or duplicated, and only its owning
-   session retries the `worktree add` or releases it.
-7. Revalidate business dependencies and overlap conflicts.
-8. Count story claims, including incomplete claims conservatively. If the count is greater than or
-   equal to `max_parallel`, keep the story queued.
-9. Prepare the story owner candidate with session, story, resolved worktree, branch and UTC time.
-10. Atomically create `stories/<Story-ID>.lock`; rename/reread its owner.
-11. Safely replace assignments via sibling candidate and destination reread.
-12. Verify project-lock owner, remove that exact `owner.md`, then `rmdir` that exact lock.
-
-If anything fails before a valid story owner is published, preserve evidence and request manual
-resolution. Do not add another lock type.
-
-## Provision and launch
-
-Create/reuse the exact worktree resolved in step 2 above — the nested namespaced path
-`workspace/worktrees/<project>/<Story-ID>`, or the confirmed legacy path when the resolver mapped
-this story to a `deferred` legacy worktree (D5). Never create a new namespaced worktree for a story
-that already has one registered, legacy or not: check real `git worktree list --porcelain` by branch
-(and the resolved mapping as corroboration) first, and reconcile into the existing worktree instead
-of provisioning a duplicate. Validate `Story-ID`, parent and leaf per `CLAUDE.md`'s
-`### Worktree path and Story-ID validation`. Create the per-project parent
-`workspace/worktrees/<project>/` idempotently (`mkdir -p`, or the host shell's idempotent
-equivalent) immediately before the `worktree add`, and after `worktree remove` during harvest
-attempt a non-recursive `rmdir` of that exact parent — both outside any lock. Validate the base ref
-and final branch with `git check-ref-format`, quote them as arguments and reject control
-characters/shell separators. Never create from uncommitted
-base-repo changes. Discover gitignored
-local rules/files needed by agents from the selected real repo, show exact contained
-source/destination paths, and copy only user-confirmed paths. Secret-like files require a separate
-exact confirmation. Do not persist this discovery in the catalog. Never commit, push or create PRs.
-
-Launch the selected Claude agent with absolute resolved paths: `PROJECT`, `WORKTREE`, `STORY`,
-`BRANCH`, `BASE_BRANCH`, `EVENTS`, `QUALITY_GUIDE`, `REGISTRY`, `SIGNALS`,
-`ANNOUNCEMENTS`, and `CONFIG` (the selected catalog entry plus resolved verification facts and
-`prose_language`: explicit command choice, else repo convention, else English). Add role-specific
-inputs before launch: security gets `SECURITY_GUIDE`; data gets `DATA_GUIDE` and resolved
-`SCRIPTS_DEST`; docs gets resolved `DOCS_DEST`; QA gets acceptance criteria and resolved test facts;
-design/code reviewers get their exact `REPORT`, design and applicable security/quality inputs.
-Agents never select a project or acquire/release claims. Record the exact base commit in START.
+Provision outside the mutex with separate validated arguments and the exact BASE_SHA. Use
+worktree-check for operation-specific preconditions, and worktree-contract.md for Git operations.
+Create the project parent idempotently; reuse existing branch registrations; never duplicate them.
+Discover ignored local rules/config and copy only already-authorized exact paths; secrets require
+separate exact authorization. A helper does not authorize copying them.
 
 ## Design and implementation
 
-Each claimed story publishes `DESIGN_PROPOSED` and waits. Its owning session rereads current
-components, decisions, designs, Signals and Announcements. If it must publish a decision or planned
-component, use the brief project mutex and the shared-write candidate pattern. Approve this story
-without waiting for proposals owned by other sessions.
+Select the generalist/specialist from capabilities. Subtasks run sequentially in the SAME worktree.
+Module implementers activate only by explicit story naming. Pass the compact story packet from
+context-contract.md, all role inputs, BASE_SHA, plan path and intended external artifacts.
 
-Dry-run persists the selected story design as PENDING APPROVAL and stops before sending approval.
-If the user approves it, run the existing design-review loop before implementation. A rejected or
-discarded empty dry-run worktree is removed only with explicit user confirmation.
+DESIGN_PROPOSED waits for this owner, independently of other sessions. Review relevant registry,
+decisions and alerts; resolve conflicts and assign migration IDs under brief shared-write windows.
+Compact/full design depth follows risk, not a weaker acceptance standard. Persist the approved
+design. In dry-run persist PENDING APPROVAL and stop before approving the writer. After user
+approval, launch design-reviewer with the actual design, relevant rules and prior findings. Present
+new findings together; persist INCORPORATED, explicitly OMITTED (with accepted scope/reason), or
+DISMISSED (with evidence), update the design and repeat only for unresolved changes. Preserve prior
+decisions; new demonstrated consequences may reopen them. Never invent user risk acceptance.
+Removing a discarded dry-run worktree still requires the existing explicit authorization.
 
-During implementation, monitor only agents belonging to claims owned by this session. On each
-notification reread that story's event file, update its assignment row under the brief mutex and
-process relevant Signals/Announcements. Coordination remains preventive through shared memory and
-corrective through a project decision when two implementations diverge.
+Capture a clean baseline with snapshot after design approval, before any story write. Pass its path
+to the writer. If scope/design changes, stop and reconcile the reservation and baseline explicitly;
+do not continue with stale evidence. Agents notify meaningful transitions; the owner persists event
+and checkpoint records. Urgent signals remain immediate. Never rewrite the board per file edit.
 
-If the project uses schema migrations, assign final ordered identifiers at the story gate using the
-project's real migration ordering rule. Never invent a migration tool.
+The writer returns IMPLEMENTATION_DONE. Run QA if acceptance warrants independent scenarios,
+then capture the final candidate against the same baseline after all QA test additions/corrections.
+QA_DONE does not approve a story. Every changed artifact, including external outputs, is inventoried.
 
-## Module stages
+## Module gates and admission
 
-Before design, resolve modules named by the story plus installed `default_activation: always`
-gates. Recompute each installed module source hash and stop for explicit update/risk review on a
-mismatch. For `provides_rules`, negotiate only new/changed rules for the selected project, resolve
-module-vs-module or module-vs-repo conflicts, persist the verdict project-scoped and embed accepted
-rules in the design. Pass selected `provides_skills` as read-only guidance.
+Before design, select story-named gates plus installed default_activation: always gates. Recompute
+installed source hashes; a mismatch requires explicit update/risk review before launch. Negotiate
+only changed rules, persist project-scoped decisions, and resolve conflicts with destination rules.
+Pass selected skills by path. At each declared stage verify the exact write zone and registered tools.
+Follow modules/README.md for rule negotiation, source trust and isolation checks. Compare content
+fingerprints as well as Git status: an already-dirty file can change without a new status entry.
+If isolation fails, stop the module, preserve evidence and legitimate work, and escalate the exact
+incident. No blanket reset or automatic revert of another story's changes. A module that changes
+accepted artifacts must finish before the final candidate capture and core review.
+Use module-admission with the manifest's resolved per-project max_concurrent; it reserves under the
+project mutex before launch. A run ID includes story, stage and attempt so reports cannot overwrite
+another stage. Incomplete RUNNING records retain capacity until their owning session reconciles them.
+No process-local counter may bypass another session. Third-party global external resources require
+separate declared serialization; do not pretend a per-project limit protects them globally.
 
-At each declared stage, launch a gate with exactly its registered tools and declared write zone,
-record pre/post diffs, and require its report at
-`modules/reports/<module>/<project>/<Story-ID>-R<n>.md`. Blocking rejection shares the core
-three-round correction budget; non-blocking output becomes reviewer advisory input. An explicitly
-named implementer module authors only its assigned story worktree/subtask and follows the normal
-design and core review gates. A module never replaces `worktree-reviewer` or writes directly to
-Signals/Announcements.
+Persist module reports at modules/reports/<module>/<project>/<Story-ID>-<stage>-R<n>.md.
+Blocking rejection shares the three-round code-correction budget; nonblocking reports inform core
+review. Gates never replace core review. Finish the exact owned admission record after its report.
 
-## Review, QA and correction
+## Independent review and correction
 
-After implementation FINALIZED, optionally run QA when acceptance criteria require functional
-scenarios, then run `worktree-reviewer` over the real diff and approved design. REJECTED findings
-return to the same claimed writer and produce another review round. After three unresolved rounds,
-ask the user.
+Run worktree-reviewer with candidate snapshot, baseline, approved design, full artifact inventory,
+check IDs and appropriate quality/security references. It runs verify with real check-only commands,
+inspects external outputs, and writes its human report and JSON receipt from artifact-contract.md.
+A demonstrable bug may reopen an approved design. Repeated old opinions or accepted unchanged risks
+are not new findings. Required checks and independent critique remain mandatory.
 
-On reviewer APPROVED:
+On REJECTED, send concrete findings to the same claimed writer. Recapture/reverify after corrections;
+three unresolved rounds escalate. On APPROVED, the owner calls approve, then release with reason
+approved and the claim lock_id. Both revalidate evidence. An unsupported/legacy receipt requires
+explicit re-review; FINALIZED text never substitutes for this proof.
 
-1. safely mark the story finalized in assignments;
-2. verify claim owner;
-3. remove only that claim's exact `owner.md`;
-4. `rmdir` only that exact story-lock directory.
+Abandonment can release capacity only as abandoned-preserved, retaining every worktree/file.
+Post-closure corrections reacquire capacity and ownership before delegation and require new review.
+Handoff/takeover retains the existing human-confirmed protocol from runtime-contract/README.md.
 
-A Phase 6 correction first reacquires a story claim under the project mutex after rechecking
-capacity and ownership, marks correction, delegates the writer, reviews again and releases the claim
-only after approval.
+## Integration and finish
 
-## Handoff and crash
+Select coherent ready sets, independent of whether later stories are queued. integrate materializes
+approved snapshots ONLY into runtime/integration. Original indexes, branches and working trees are
+untouched. Run integration-verify with the real required combined checks. Report exact IDs, conflicts,
+checks and stale evidence; MATERIALIZED is not functional success. Corrections return to owned writers.
 
-A live handoff requires both sessions and a stable checkpoint. Under the project mutex, keep the
-story-lock directory present, replace `owner.md` through candidate/verify/rename/reread, update
-assignments and release the mutex. A dead owner can be replaced only after the user inspects board,
-events, worktree and diff and explicitly confirms takeover.
-
-## Finish
-
-A session may finish when it owns no story claims. It does not need other sessions to finish.
-
-A project summary is valid only when a read under the project mutex finds no story claims, no
-queued/implementing/reviewing/correction stories, and all final reviews/events. Run the read-only
-trial merge, update project metrics/reputation with safe writes, and report worktree, branch, files,
-review rounds, decisions, advisories and verification per story. A later new story is simply a new
-run.
-
-## Non-negotiable safety
-
-- No lock besides catalog, project and story.
-- No automatic takeover, recursive lock removal, force worktree removal, commit, push or PR.
-- No automatic copy/merge of uncommitted changes between worktrees.
-- No shared write without the appropriate brief mutex and verified replacement.
-- `catalog.lock` is the one brief global-metadata mutex; its historical path protects exactly
-  `.orchestrator/projects.yml` registration/bootstrap/replacement and serialized
-  `modules/registry.md` replacement, without adding a lock type. Module-registry mutations reread, write and
-  validate a sibling candidate, rename it exactly, reread the destination, then release. They do
-  not hold a project mutex at the same time.
-- Modules retain their declared isolation and never replace the core adversarial reviewer.
+A session ends when it owns no claims. Global project closure additionally requires a fresh
+mutex-protected check of no active/pending work and current reviews/events; never report a stale
+integration set as the latest global state. Safely update derived metrics/reputation, including
+actual durations/tokens when available and unknown values otherwise. Harvest remains the user's job.

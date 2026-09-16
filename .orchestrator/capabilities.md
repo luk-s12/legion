@@ -4,7 +4,7 @@ Catalog of the available implementing agent types, with which domain each one co
 when it's appropriate to use. The orchestrator consults it during `/legion` "Plan view" to decide
 which `subagent_type` to launch for each story — instead of assuming it's always the same one.
 
-**Selection rule** (full detail in `CLAUDE.md`, section "Agent selection per story"):
+**Selection rule** (full detail in `CLAUDE.md`, section "Agent lifecycle"):
 
 1. Story with a normal combination of domains → **`worktree-agent`** (generalist, default).
 2. Story purely about a single specialized domain, with no application code around it → the

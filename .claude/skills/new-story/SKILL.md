@@ -4,8 +4,8 @@ description: Assistant for creating a User Story in requirements/<project>.md. A
 ---
 ## Mandatory /new-story project and publication rules
 
-Always ask the user to select/confirm the project before ID discovery or repo analysis, even when a
-flag preselected it. The semantic preview lives only at
+Resolve the project before ID discovery or repo analysis. Reuse an explicit session/flag selection;
+ask only when missing, ambiguous or changed. The semantic preview lives only at
 `.orchestrator/projects/<project>/stories/<Story-ID>.md` and is not schedulable. After the exact
 final text is confirmed, acquire the project mutex, reread requirements/story record/assignments,
 revalidate the ID, publish requirements and the final story record through verified candidates,
@@ -24,7 +24,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -39,7 +39,7 @@ If what the user brings is a high-level objective where they don't yet know how 
 
 ## Step 1 — Basic data, working file, and ID resolution
 
-Take the Story ID and description from the args if the command was invoked with them already (e.g. `/new-story PROJ-100: <description>` or just a free-form description you can extract an implied ID from). **If invoked with no arguments at all, ask for them one field at a time, in two separate turns — never bundle both questions into a single message.**
+Take the Story ID and description from the arguments when supplied. Ask missing independent fields together. Reuse known values and approvals; do not spend separate turns requesting a known ID or description.
 
 ### Prepare `.orchestrator/projects/<project>/stories/`
 
@@ -244,7 +244,7 @@ Orientative budgets: expected outcome 80-120 words across up to 3 short paragrap
 
 **Decision separated from evidence**: the canonical formulation of each binding decision lives **exactly once**, in `## Definitions taken`, short and self-sufficient. The editorial "Binding technical decisions" section references that formulation by name and only adds reason, evidence, alternatives, and consequences — it never restates the decision in full. Evidence explains why; it doesn't get mixed into every criterion. Discarded alternatives are documented once, under their decision.
 
-**`Definitions taken` must be self-sufficient**: every confirmed decision, binding assumption, and accepted risk must be understandable there without reading any other section — that's the canonical copy the reviewer and design-reviewer rely on to recognize what is *not* a finding.
+**`Definitions taken` must be self-sufficient**: every confirmed decision, binding assumption, and accepted risk must be understandable there without reading any other section — that is the canonical record of accepted scope. Unchanged accepted risks are not repeated; new evidence or unaccepted consequences can still be findings.
 
 **Amendments**: when a story is later edited, rewrite the contract with the current value, remove the superseded instructions from the binding body, and keep at most one short historical note if it adds traceability. Reject leaving two incompatible values (TTL, limit, mechanism) side by side, and never leave a "warning above + full obsolete spec below" — there is only ever one currently-valid contract.
 
@@ -293,7 +293,7 @@ Same in-memory-snapshot discipline as Checkpoint A: capture the exact content th
 `## Depends on`, `## Modules`, and `## Subtasks` are **omitted completely** when they don't apply — never persisted empty or with a "no dependencies" bullet.
 
 **`## Depends on`**:
-- Only a business dependency: this story doesn't make sense before another is already `finalized`. Code overlap is not a dependency — the scheduler already serializes that into different reservations.
+- A dependency records required business order. During planning classify order-only versus required code availability under `.orchestrator/artifact-contract.md`. Approval without integration does not satisfy a consumer needing that code in its base: it waits as WAITING_INTEGRATION. Mere overlap remains a scheduling conflict.
 - Format: `- <ID of the other story>`.
 - Each ID must exist as a real story in `requirements/<project>.md` — a draft, a placeholder, or free text doesn't qualify.
 - If unsure whether it's a real dependency or just an ordering preference, ask in Step 3.

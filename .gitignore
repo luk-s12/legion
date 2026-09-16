@@ -18,6 +18,13 @@
 # Local Claude Code permissions config (contains paths/approvals for this machine).
 .claude/settings.local.json
 
+# Reproducible local checks keep raw output and external drafts off Git.
+/tests/harness/results/
+/.orchestrator/projects/**/verification/*.log
+/.orchestrator/projects/**/integration/*.log
+/docs/**/.staging/
+/scripts/**/.staging/
+
 # Custom
 feature/*
 assets/build-gifs/*

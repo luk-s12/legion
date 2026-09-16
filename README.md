@@ -25,13 +25,18 @@ flowchart LR
     W --> V["Verification"]
     V --> R["Independent review"]
     R -->|Corrections| W
-    R -->|Approved| T["Trial merge"]
+    R -->|Approved| T["Isolated integration checks"]
     T --> E["Branches ready<br/>to harvest"]
 ```
 
 **You describe the outcome. Legion manages the queue, isolation, design gates, specialists, verification, and review. You keep control of commits, pushes, and PRs.**
 
 ## Quick start
+
+Use **Claude Code, Git and Node.js 22+**. No npm dependencies are needed for Legion's runtime.
+The [helper guide](tools/harness/README.md) covers installation checks and recovery; the
+[validation report](.orchestrator/benchmarks/README.md) separates tested behavior from pending
+performance measurements. This harness currently supports Claude Code only.
 
 ### 1. Add your project
 
@@ -91,9 +96,15 @@ Legion does not commit, push, or create PRs. Do not remove a worktree before com
 6. **Implements and verifies** using the destination project's real commands and conventions.
 7. **Runs an independent adversarial review**; rejected work returns for correction, up to three rounds before escalation.
 8. **Rotates the queue** as capacity becomes available, honoring code conflicts and explicit dependencies.
-9. **Checks the combined result** with final consistency checks and a trial merge before closing.
+9. **Checks the combined result** by materializing approved snapshots in an isolated temporary directory and running the required integration checks.
 
 Each project has its own `max_parallel` ceiling. Story claims are counted while holding that project's brief mutex, so multiple Claude sessions cannot both take the last capacity place. The number of queued stories is not limited.
+
+Approval identifies the exact base commit, working files, Git index and declared external docs/scripts.
+Changed evidence requires review again. A reviewed code dependency starts consumers only after its
+required content is integrated into their base. Transition events and compact checkpoints replace
+per-file narration. Context follows story scope and risk; independent review and required checks
+remain mandatory. Verification-result caching is disabled until its correctness is demonstrated.
 
 ## Choose the right command
 

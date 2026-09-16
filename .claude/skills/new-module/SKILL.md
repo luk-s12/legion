@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -71,7 +71,7 @@ contained cleanup; never reuse it silently.
   left referencing the temporary checkout.
 
 **Record a source fingerprint, always** (this is what makes the version/contract check in
-`legion/SKILL.md` "Module stages" and `run-module/SKILL.md` "Version/contract check" possible later — `modules/installed/
+`legion/SKILL.md` "Module gates and admission" and `run-module/SKILL.md` "Version/contract check" possible later — `modules/installed/
 <name>/` is a **plain copy**, deliberately with no `.git` of its own, so there's nothing there for
 those checks to `git fetch` against; a content hash is the mechanism that actually works
 regardless of whether `<repo-or-path>` was a git URL or a local path): concatenate `module.md` +
@@ -143,10 +143,10 @@ single fixed list would reject valid manifests of the other type:
   **Reject outright** if any of `writes_to`, `blocking`, `valid_stages`, `default_stage`,
   `max_rejection_rounds`, `max_concurrent` is present — none of these apply to this `type` (see
   `modules/README.md`, "`type: implementer` — a module that writes code"). `max_concurrent` in
-  particular has nowhere to plug into: unlike a gate's active-report limit (see `legion/SKILL.md`,
-  "Module stages", derived from `modules/reports/<name>/<project>/` entries with no final verdict), an implementer subtask doesn't
-  produce a report in that shape — accepting the field would just have it silently ignored at
-  launch, so it's rejected instead of shipping a knob that does nothing. **Reject outright** if
+  particular does not apply: gates use explicit per-project module-admission records under
+  project.lock (see `legion/SKILL.md`, "Module gates and admission"); an implementer is already
+  serialized by its story claim and the story's sequential subtask lifecycle. Reject the field
+  rather than silently ignoring it. Never infer gate admission from report filenames. **Reject outright** if
   `default_activation: always` is declared for this `type` — only `opt-in` is valid here (the
   field can simply be omitted, since `opt-in` is its only valid value).
 
@@ -167,7 +167,7 @@ malformed rules file can't be negotiated later, this is caught now, at install t
 other incomplete manifest. This is form validation only — **no negotiation of accept/reject
 happens in this skill**: that's
 lazy, per-project, triggered by `/legion` the first time a project actually uses the module (see
-`modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, "Module stages").
+`modules/README.md`, "Negotiation of `provides_rules`", and `legion/SKILL.md`, "Module gates and admission").
 
 ## Step 3 — Consistency checks
 

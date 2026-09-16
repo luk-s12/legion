@@ -4,7 +4,7 @@ description: Assistant for splitting a high-level objective (not yet shaped into
 ---
 ## Mandatory /new-objective project rule
 
-Ask for the project once before research and keep it fixed for the whole breakdown. Persist the
+Resolve the project before research, reusing an explicit selection; ask only when missing or ambiguous. Keep it fixed for the breakdown. Persist the
 objective and each individually confirmed story under that project's brief mutex using the same
 safe publication segment as `/new-story`; never hold the mutex during interviews or analysis.
 
@@ -14,7 +14,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate

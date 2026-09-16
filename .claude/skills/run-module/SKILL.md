@@ -8,7 +8,7 @@ Resolve or confirm the project through `.orchestrator/projects.yml` before readi
 The selected catalog entry is the sole configuration authority. Use only
 `requirements/<project>.md`, `.orchestrator/projects/<project>/...`, `workspace/<repo_dir>` and
 namespaced worktrees. A missing or empty catalog is never assumed new or old — apply exclusively
-`CLAUDE.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
+`.orchestrator/bootstrap-contract.md`'s project-resolver table under "Required bootstrap for an older installation" (empty
 and missing resolve differently) and never permit old singleton paths.
 
 For a project-shared write, acquire the brief project mutex, reread current state, write and validate
@@ -36,7 +36,7 @@ see `new-story/SKILL.md`) — this is the only way a `generator` ever runs.
 
 ## Step 2 — Version/contract check
 
-Same source-hash check described in `legion/SKILL.md`, "Module stages" — this is
+Same source-hash check described in `legion/SKILL.md`, "Module gates and admission" — this is
 one mechanism triggered by "about to launch this module's code", regardless of the entry point:
 recompute the source content hash (`module.md` + `agent_entrypoint` + `provides_rules` +
 `provides_skills`, re-resolved fresh from `source` in `modules/installed/<name>/.legion-source.md`)
@@ -64,7 +64,7 @@ module is `deprecated` in `modules/registry.md`, reject with that reason instead
 - **Isolation check, `scope: base-repo` only**: `git -C workspace/<repo_dir> status --porcelain`
   before and after the run. Anything new that isn't exactly what `output` declares (which lives
   outside the base repo anyway) is an **incident** — same severity as a worktree isolation
-  violation (`legion/SKILL.md`, "Module stages"): protect legitimate work, revert only the exact
+  violation (`legion/SKILL.md`, "Module gates and admission"): protect legitimate work, revert only the exact
   unexplained paths and inform the user.
 
 ## Step 4 — Report
