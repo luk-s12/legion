@@ -118,10 +118,26 @@ Agents never select a project or acquire/release claims. Record the exact base c
 
 ## Design and implementation
 
-Each claimed story publishes `DESIGN_PROPOSED` and waits. Its owning session rereads current
-components, decisions, designs, Signals and Announcements. If it must publish a decision or planned
-component, use the brief project mutex and the shared-write candidate pattern. Approve this story
-without waiting for proposals owned by other sessions.
+Each claimed story publishes `DESIGN_PROPOSED` and its agent ends its turn (Stage A complete). The owning
+session rereads current components, decisions, designs, Signals and Announcements. If it must publish a
+decision or planned component, use the brief project mutex and the shared-write candidate pattern.
+
+**Design gate (one per run, owned by the user).** The owner never approves a design on its own.
+1. Read each proposal's `Risk checklist`. A story is **risky** when it touches shared or persisted state
+   under concurrency, payments or money flow, asynchronous consumers/events/queues, schema or data
+   migrations, authorization, or a contract other code or services consume. Add any risk the owner
+   itself finds in the proposal.
+2. For every risky story, launch `design-reviewer` on the persisted proposal (read-only, no approval
+   needed), all in parallel. Not-risky stories skip it: no extra agent, no extra round.
+3. Present ONE consolidated gate to the user with every pending story: a short summary of the design,
+   the risk flags, the design-review findings triaged as INCORPORATED / OMITTED (accepted scope and
+   reason) / DISMISSED (with evidence), and the open questions as numbered options with a recommended
+   default. The user answers once. Never invent a user approval or risk acceptance.
+4. Send each writer its approval (with the adjustments) via SendMessage and record the triage as a
+   decision. A material change by the user repeats only a design-review round on the delta.
+
+While waiting for the user, do not sleep, poll or keep background work running: end the turn with every
+agent idle. Waiting is the user's time, not the harness's.
 
 Dry-run persists the selected story design as PENDING APPROVAL and stops before sending approval.
 If the user approves it, run the existing design-review loop before implementation. A rejected or
@@ -154,7 +170,11 @@ Signals/Announcements.
 ## Review, QA and correction
 
 After implementation FINALIZED, optionally run QA when acceptance criteria require functional
-scenarios, then run `worktree-reviewer` over the real diff and approved design. REJECTED findings
+scenarios, then run `worktree-reviewer` over the real diff and approved design. Before launching it,
+check that FINALIZED states the writer's format gate result; if it does not, return the story to the
+writer first (a formatting-only rejection costs a full review round). The reviewer always writes its own
+report at `REPORT`: the owner never writes or summarizes a reviewer's report. If the file is missing or
+empty when the reviewer returns, relaunch the reviewer with the same inputs and record the incident. REJECTED findings
 return to the same claimed writer and produce another review round. After three unresolved rounds,
 ask the user.
 

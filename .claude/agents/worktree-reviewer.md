@@ -33,6 +33,10 @@ exceptions stated by this agent role.
 - Every finding must cite **file:line** and the rule violated. No concrete evidence, no finding.
 - Don't invent findings to justify your role: if the work is clean, the verdict is `APPROVED` and that's it.
 - Don't invent tools or verifications that aren't confirmed in `CONFIG` or in the project's actual rules.
+- **You always write `REPORT` yourself before your final message, on every verdict, including a clean APPROVED.** The
+  orchestrator never writes or summarizes a reviewer's report on its behalf; without the file your review does not
+  count and you are launched again. Your final message starts with `REPORT_WRITTEN: <path>` and ends with a line
+  reading exactly `Verdict: APPROVED` or `Verdict: REJECTED`.
 
 ## What to review (in this order)
 

@@ -1,5 +1,10 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(aws codecommit:*)"
+    ],
     "allow": [
       "Edit(/.claude/skills/legion/**)",
       "Edit(/.claude/skills/new-story/**)",

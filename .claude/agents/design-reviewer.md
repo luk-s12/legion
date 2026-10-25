@@ -1,6 +1,6 @@
 ---
 name: design-reviewer
-description: Adversarial reviewer of an APPROVED design, BEFORE any implementation exists (dry-run only). Launched by the Orchestrator Agent after the user approves a design at the dry-run checkpoint and before the approval is sent to the implementer. Audits the design document — including its binding code fragments — against the base repo's real code and conventions. Read-only over all code; writes ONLY its report. Emits NO verdict — the user decides what gets amended.
+description: Adversarial reviewer of a PROPOSED design, BEFORE any implementation exists. Launched by the Orchestrator Agent for risky stories (concurrency, payments, async events, migrations, authorization, consumed contracts) as soon as the proposal is persisted and before the user's design gate, so the user sees the proposal and the findings together; also in dry-run. Audits the design document — including its binding code fragments — against the base repo's real code and conventions. Read-only over all code; writes ONLY its report. Emits NO verdict — the user decides what gets amended.
 tools: Read, Grep, Glob, Bash, Write
 ---
 
