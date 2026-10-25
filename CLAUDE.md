@@ -364,11 +364,13 @@ project verification facts in `CONFIG`. `CONFIG.prose_language` is the language 
 for the command, otherwise the destination repo's established prose language, otherwise English.
 Agents use these paths opaquely; they do not select projects or manage claims.
 
-Each story has a two-stage agent protocol: DESIGN_PROPOSED ends the writer's turn; the user's approval
-starts implementation. The owner never approves a design on its own: it reads each proposal's risk
-checklist, runs `design-reviewer` only for risky stories, and presents one consolidated gate to the user
-(see the `/legion` skill). The owner checks project components, decisions and historical designs before
-presenting it. Divergences discovered later use a recorded project decision and correction order.
+Each story has a two-stage agent protocol: DESIGN_PROPOSED ends the writer's turn; approval starts
+implementation. The owner gives each proposal a level (normal, large or critical) from its risk checklist
+and runs `design-reviewer` only for critical stories. In plain `/legion` the owner approves normal stories
+on its own, and asks the user (one consolidated question) for large and critical ones, naming the level and
+the path of the design to review. In `/legion dry-run` every story stops at that consolidated gate (see the
+`/legion` skill). The owner checks project components, decisions and historical designs first. Divergences
+discovered later use a recorded project decision and correction order.
 
 Schema migrations use the real project's tool/order only. Identifiers are assigned at the story
 gate. Never invent a migration mechanism.

@@ -122,26 +122,43 @@ Each claimed story publishes `DESIGN_PROPOSED` and its agent ends its turn (Stag
 session rereads current components, decisions, designs, Signals and Announcements. If it must publish a
 decision or planned component, use the brief project mutex and the shared-write candidate pattern.
 
-**Design gate (one per run, owned by the user).** The owner never approves a design on its own.
-1. Read each proposal's `Risk checklist`. A story is **risky** when it touches shared or persisted state
-   under concurrency, payments or money flow, asynchronous consumers/events/queues, schema or data
-   migrations, authorization, or a contract other code or services consume. Add any risk the owner
-   itself finds in the proposal.
-2. For every risky story, launch `design-reviewer` on the persisted proposal (read-only, no approval
-   needed), all in parallel. Not-risky stories skip it: no extra agent, no extra round.
-3. Present ONE consolidated gate to the user with every pending story: a short summary of the design,
-   the risk flags, the design-review findings triaged as INCORPORATED / OMITTED (accepted scope and
-   reason) / DISMISSED (with evidence), and the open questions as numbered options with a recommended
-   default. The user answers once. Never invent a user approval or risk acceptance.
-4. Send each writer its approval (with the adjustments) via SendMessage and record the triage as a
-   decision. A material change by the user repeats only a design-review round on the delta.
+**Design gate.** The owner gives every proposal a **level**, written in the persisted design:
+- **critical**: it touches shared or persisted state under concurrency, payments or money flow,
+  asynchronous consumers/events/queues, schema or data migrations, authorization, or a contract other code
+  or services consume. Add any such risk the owner itself finds in the proposal.
+- **large**: not critical, but big: the design touches more than about 10 production files (tests and fixtures
+  do not count), adds a new public endpoint or changes the shape of an existing contract (tightening the
+  validation of an existing endpoint is not that), or its estimate exceeds the repo's PR size guideline
+  (about 400 changed lines when the repo's `CLAUDE.md` states one).
+- **normal**: everything else.
 
-While waiting for the user, do not sleep, poll or keep background work running: end the turn with every
-agent idle. Waiting is the user's time, not the harness's.
+1. Read each proposal's `Risk checklist` and assign the level.
+2. For every critical story, launch `design-reviewer` on the persisted proposal (read-only, no approval
+   needed), all in parallel. Normal and large stories skip it: no extra agent, no extra round.
+3. Triage every finding as INCORPORATED (adjust the proposal), DISMISSED (with evidence) or OMITTED
+   (accepted scope and reason).
+4. **Plain `/legion`.** A **normal** story is approved by the owner on its own: record the triage as a decision,
+   send the writer its approval (with the adjustments) via SendMessage, and say in the next message what was
+   decided. A **large or critical** story is never approved by the owner alone: ask the user with the question
+   tool, in ONE consolidated question for every large or critical story pending. Normal stories of the same
+   run are not held back. Each story in the question MUST state, in the user's language: its ID; its level
+   and why (for example "CRITICAL: touches payments and asynchronous events"); that the user has to review
+   the design before approving; the exact absolute path of the design file
+   (`.orchestrator/projects/<project>/designs/<Story-ID>.md`) and, when `design-reviewer` ran, the absolute path of its
+   report; a short summary, the triage and the open questions. Offer the options approve / approve with
+   adjustments / reject, with a recommended default. Never invent a user approval or a risk acceptance.
+5. **`/legion dry-run`: the user approves every story.** Persist each design as PENDING APPROVAL and present
+   ONE consolidated gate with every pending story, with the same information as in step 4 (level and why,
+   design path, review path, summary, triage, open questions as numbered options with a recommended default).
+   Send no approval until the user answers.
+6. A material change by the user repeats only a design-review round on the delta.
 
-Dry-run persists the selected story design as PENDING APPROVAL and stops before sending approval.
-If the user approves it, run the existing design-review loop before implementation. A rejected or
-discarded empty dry-run worktree is removed only with explicit user confirmation.
+While waiting for the user, do not sleep or poll. Stories already approved keep running; the question is
+only about the pending ones. Waiting is the user's time, not the harness's.
+
+Dry-run stops at the design gate above for every story, even a normal one, and sends no approval until
+the user answers. A rejected or discarded empty dry-run worktree is removed only with explicit user
+confirmation.
 
 During implementation, monitor only agents belonging to claims owned by this session. On each
 notification reread that story's event file, update its assignment row under the brief mutex and

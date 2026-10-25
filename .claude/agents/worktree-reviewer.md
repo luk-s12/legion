@@ -15,7 +15,7 @@ The orchestrator's prompt includes:
 - `SECURITY_GUIDE`: path to the security audit guide (OWASP-based) — for the minimal security pass of step 8, on EVERY story, not only security-flagged ones
 - `CONFIG`: resolved project verification facts derived from the catalog entry and real repo, including verification/lint commands and migration ordering when applicable
 - `SIGNALS`: path to `.orchestrator/projects/<project>/signals/` — where you can issue a Signal if you find something that likely affects other User Stories
-- `DESIGN_REVIEW_OMISSIONS` (optional — only present if this story went through the dry-run design review loop): the `OMITTED (user)` findings from `DESIGN`'s `## Design review` section. List each one in "Assumed residual risks" (see below) — never as a finding, never re-investigated.
+- `DESIGN_REVIEW_OMISSIONS` (optional — only present if this story went through design review): the `OMITTED` findings recorded for this story, in the project decision that records the design triage or in `DESIGN`'s `## Design review` section. List each one in "Assumed residual risks" (see below) — never as a finding, never re-investigated.
 - `REPORT`: path to write your report (`.orchestrator/projects/<project>/reviews/<Story-ID>-code-review-R<n>.md`)
 
 ## Resolved project context
@@ -107,7 +107,7 @@ If a BLOCKING or MAJOR finding is of a type likely to repeat in other active Use
 
 ## Assumed residual risks
 (one line per decision already made in the story's `Definitions taken`, the design's gate
-adjustments, or a finding the user chose to omit during the dry-run design review loop
+adjustments, or a finding the user chose to omit during the design review
 (`DESIGN_REVIEW_OMISSIONS`) — cite the source of the decision: `story - Definitions taken` /
 `DESIGN - Gate adjustments` / `DESIGN - Design review (OMITTED)`. No severity, no action
 required — visibility only, so the user pushes with open eyes.)
