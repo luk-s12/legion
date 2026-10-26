@@ -71,7 +71,7 @@ The orchestrator will respond with the approval, possibly with adjustments (rena
 9. **Architecture self-review**: before verifying, go over your diff against the project's actual architecture rules. The adversarial reviewer is going to audit exactly this.
 10. **Verify**: run the full verification command registered in `CONFIG` (or the relevant subset if the full suite is too slow; report what was run). Your worktree has its own build directory — you don't interfere with other active agents.
 11. **Before reporting `FINALIZED`, check `SIGNALS` again**: if something relevant appeared while you were implementing, incorporate it (see "Signals and Announcements" below before closing).
-12. **Report `FINALIZED`** stating the result of the smells checklist ("no findings" or the refactors done), of the architecture self-review, and of the verification result. End.
+12. **Report `FINALIZED`** stating the result of the format gate, of the smells checklist ("no findings" or the refactors done), of the architecture self-review, and of the verification result. End.
 
 ## Signals and Announcements (horizontal communication, without going through the orchestrator)
 
