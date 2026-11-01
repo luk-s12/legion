@@ -33,7 +33,7 @@ a `.gitkeep`).
 ├── reputation.md           # derived review audit
 ├── announcements/          # <ID>.md horizontal research findings
 ├── decisions/              # DEC-NNN.md architectural conflict decisions
-├── designs/                # <Story-ID>.md approved design and dry-run state
+├── designs/                # <Story-ID>.md proposed/approved design, level and dry-run state
 ├── events/                 # <Story-ID>.md append-only agent progress
 ├── module-rules/           # per-project accepted module rules
 ├── objectives/             # /new-objective breakdown memory
@@ -49,7 +49,7 @@ a `.gitkeep`).
 - `lessons-learned.md`: permanent incidents for the selected codebase.
 - `metrics.md` and `reputation.md`: derived, informational audits.
 - `events/<Story-ID>.md`: append-only agent progress.
-- `designs/<Story-ID>.md`: approved story design and dry-run state.
+- `designs/<Story-ID>.md`: proposed/approved story design, its level (normal, large, critical) and dry-run state.
 - `reviews/<Story-ID>-*.md`: design/code review reports.
 - `decisions/DEC-NNN.md`: architectural conflict decisions.
 - `signals/<ID>.md` and `announcements/<ID>.md`: unique horizontal records.

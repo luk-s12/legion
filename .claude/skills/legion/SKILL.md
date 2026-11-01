@@ -147,17 +147,22 @@ decision or planned component, use the brief project mutex and the shared-write 
    (`.orchestrator/projects/<project>/designs/<Story-ID>.md`) and, when `design-reviewer` ran, the absolute path of its
    report; a short summary, the triage and the open questions. Offer the options approve / approve with
    adjustments / reject, with a recommended default. Never invent a user approval or a risk acceptance.
-5. **`/legion dry-run`: the user approves every story.** Persist each design as PENDING APPROVAL and present
-   ONE consolidated gate with every pending story, with the same information as in step 4 (level and why,
-   design path, review path, summary, triage, open questions as numbered options with a recommended default).
-   Send no approval until the user answers.
-6. A material change by the user repeats only a design-review round on the delta.
+5. **`/legion dry-run`: the user reviews and approves every story, normal ones included.** Persist each design
+   as PENDING APPROVAL, ask the user to review it, and collect the decision with the question tool, in ONE
+   consolidated question for every pending story. Each story MUST state what step 4 requires (ID, level and
+   why, that the user has to review the design before approving, the absolute design path and, when
+   `design-reviewer` ran, the absolute report path, summary, triage, open questions) and offer approve /
+   approve with adjustments / reject, with a recommended default. Send no approval until the user answers;
+   never infer it from silence or from the run having started in dry-run.
+6. A material change by the user to a critical story repeats only a `design-reviewer` round on the delta.
+   For a normal or large story, the owner re-presents the amended design to the user for approval (always in
+   dry-run, and in plain `/legion` for a large one) without launching `design-reviewer`.
 
 While waiting for the user, do not sleep or poll. Stories already approved keep running; the question is
 only about the pending ones. Waiting is the user's time, not the harness's.
 
 Dry-run stops at the design gate above for every story, even a normal one, and sends no approval until
-the user answers. A rejected or discarded empty dry-run worktree is removed only with explicit user
+the user answers the question. A rejected or discarded empty dry-run worktree is removed only with explicit user
 confirmation.
 
 During implementation, monitor only agents belonging to claims owned by this session. On each
