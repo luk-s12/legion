@@ -368,7 +368,7 @@ Each story has a two-stage agent protocol: DESIGN_PROPOSED ends the writer's tur
 implementation. The owner gives each proposal a level (normal, large or critical) from its risk checklist
 and runs `design-reviewer` only for critical stories. In plain `/legion` the owner approves normal stories
 on its own, and asks the user (one consolidated round of questions, see "Questions to the user") for large
-and critical ones, after naming in the chat the level and the path of the design to review. In
+and critical ones, after naming in the chat the level and giving a link to the design to review. In
 `/legion dry-run` every story stops at that consolidated gate (see the
 `/legion` skill). The owner checks project components, decisions and historical designs first. Divergences
 discovered later use a recorded project decision and correction order.
@@ -462,6 +462,12 @@ description on one line and turns a line break into a stray symbol.
   The two result lines appear only when the options lead to a concrete result shown in the chat (see
   "Concrete result"). Never narrate the format or the environment you chose, how you got there, or what
   you are about to ask.
+- **Files to open.** Whenever a message asks the user to review a file (a design, a reviewer report, a
+  story preview), before a question or in any other message, give the file as a link the user can open
+  with one click. In the VS Code extension, write a markdown link whose target is the path relative to the
+  Legion root, for example `[<Story-ID>.md](.orchestrator/projects/<project>/designs/<Story-ID>.md)`;
+  anywhere else, write the absolute path on its own line. Never give it only as code text, inside a table
+  cell or inside the question itself.
 - **Short question.** The question itself stands on its own in at most three short sentences: what
   happens, why it matters (only when that is not obvious) and one direct question. Never paste paths,
   method lists or a triage into it.

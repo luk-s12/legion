@@ -132,6 +132,10 @@ decision or planned component, use the brief project mutex and the shared-write 
   (about 400 changed lines when the repo's `CLAUDE.md` states one).
 - **normal**: everything else.
 
+Every message that names a persisted design or a `design-reviewer` report (when it is persisted, while the
+reviewer runs and at the gate) gives it as a link the user can open, as CLAUDE.md "Questions to the user"
+("Files to open") says.
+
 1. Read each proposal's `Risk checklist` and assign the level.
 2. For every critical story, launch `design-reviewer` on the persisted proposal (read-only, no approval
    needed), all in parallel. Normal and large stories skip it: no extra agent, no extra round.
@@ -144,9 +148,8 @@ decision or planned component, use the brief project mutex and the shared-write 
    "Questions to the user". Normal stories of the same run are not held back. Right before the call, the
    chat message MUST state for each story, in the user's language: its ID; its level and why (for example
    "CRITICAL: touches payments and asynchronous events"); that the user has to review the design before
-   approving; the exact absolute path of the design file
-   (`.orchestrator/projects/<project>/designs/<Story-ID>.md`) and, when `design-reviewer` ran, the absolute path of its
-   report; a one-line summary, only the part of the triage the user needs (the full triage stays in the
+   approving; a link to the design file (`.orchestrator/projects/<project>/designs/<Story-ID>.md`) and, when
+   `design-reviewer` ran, a link to its report; a one-line summary, only the part of the triage the user needs (the full triage stays in the
    design) and the open questions, in the short shape CLAUDE.md asks for. In the dialog, each story gets
    one short question with the options approve / approve with adjustments / reject / decide later and a
    recommended default; an open question that needs the user's decision is a separate question in the same round.
