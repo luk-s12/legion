@@ -140,20 +140,24 @@ decision or planned component, use the brief project mutex and the shared-write 
 4. **Plain `/legion`.** A **normal** story is approved by the owner on its own: record the triage as a decision,
    send the writer its approval (with the adjustments) via SendMessage, and say in the next message what was
    decided. A **large or critical** story is never approved by the owner alone: ask the user with the question
-   tool, in ONE consolidated question for every large or critical story pending. Normal stories of the same
-   run are not held back. Each story in the question MUST state, in the user's language: its ID; its level
-   and why (for example "CRITICAL: touches payments and asynchronous events"); that the user has to review
-   the design before approving; the exact absolute path of the design file
+   tool, in ONE consolidated round for every large or critical story pending, following CLAUDE.md
+   "Questions to the user". Normal stories of the same run are not held back. Right before the call, the
+   chat message MUST state for each story, in the user's language: its ID; its level and why (for example
+   "CRITICAL: touches payments and asynchronous events"); that the user has to review the design before
+   approving; the exact absolute path of the design file
    (`.orchestrator/projects/<project>/designs/<Story-ID>.md`) and, when `design-reviewer` ran, the absolute path of its
-   report; a short summary, the triage and the open questions. Offer the options approve / approve with
-   adjustments / reject, with a recommended default. Never invent a user approval or a risk acceptance.
+   report; a one-line summary, only the part of the triage the user needs (the full triage stays in the
+   design) and the open questions, in the short shape CLAUDE.md asks for. In the dialog, each story gets
+   one short question with the options approve / approve with adjustments / reject / decide later and a
+   recommended default; an open question that needs the user's decision is a separate question in the same round.
+   "Decide later" keeps the design PENDING APPROVAL and the claim held while the other stories go on; the
+   owner asks again in the next round, and at the latest before the session would close. Never invent a
+   user approval or a risk acceptance.
 5. **`/legion dry-run`: the user reviews and approves every story, normal ones included.** Persist each design
-   as PENDING APPROVAL, ask the user to review it, and collect the decision with the question tool, in ONE
-   consolidated question for every pending story. Each story MUST state what step 4 requires (ID, level and
-   why, that the user has to review the design before approving, the absolute design path and, when
-   `design-reviewer` ran, the absolute report path, summary, triage, open questions) and offer approve /
-   approve with adjustments / reject, with a recommended default. Send no approval until the user answers;
-   never infer it from silence or from the run having started in dry-run.
+   as PENDING APPROVAL, ask the user to review it, and collect the decision for every pending story in ONE
+   consolidated round, exactly as step 4 does: the same chat message before the call and the same questions
+   and options. Send no approval until the user answers; never infer it from silence or from the run having
+   started in dry-run.
 6. A material change by the user to a critical story repeats only a `design-reviewer` round on the delta.
    For a normal or large story, the owner re-presents the amended design to the user for approval (always in
    dry-run, and in plain `/legion` for a large one) without launching `design-reviewer`.

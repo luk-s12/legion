@@ -16,7 +16,9 @@ writer claim.
 
 Resolve `prose_language` once for this command: an explicit user choice wins; otherwise use the
 destination repo's established prose language; if none is evident, use English. Keep structural tags
-in English regardless.
+in English regardless. `prose_language` applies to the persisted files only: everything the user reads in
+the chat and in the questions is in the user's language (CLAUDE.md "Questions to the user"), even when
+`prose_language` is another one.
 
 ## Mandatory project scope
 
@@ -76,7 +78,7 @@ When checking a specific ID against `requirements/<project>.md`, don't do a bool
 
 ### Picking a new ID (state `NEW`, or the user wants a different one)
 
-1. Resolve the **Story ID** with `AskUserQuestion` (never leave it as a bare open question — that call needs 2-4 concrete options, or it fails):
+1. Resolve the **Story ID** with `AskUserQuestion`, written in the user's language (never leave it as a bare open question — that call needs 2-4 concrete options, or it fails; the quoted options below give the meaning, not the wording):
    - Scan `requirements/<project>.md` for existing `# Story <ID>` IDs (ignoring placeholders, per above).
    - **If a single shared prefix is detected** (every real story ID splits into the same `PREFIX-NUMBER` shape, e.g. all of them start with `SO-`): compute the next available number in that sequence and offer it as the first, recommended option worded so the user only has to supply the number (e.g. "Use `SO-` + your number (e.g. `SO-23`) — next available: `SO-23`"). The user types just the number; concatenate it to the detected prefix yourself. Add a second option to use a different prefix instead, for the rare case this story doesn't belong to that sequence.
    - **If there's no real story yet, or the existing ones don't share a single prefix** (mixed conventions): fall back to inferring the most likely next full ID and offer it as the recommended option (e.g. "Use `OS-2` (next available)"), plus a second option such as "Use a different prefix."
@@ -111,9 +113,9 @@ Use the selected project's resolved `workspace/<repo_dir>` as reference. If that
 
 ## Step 3 — Ask about what doesn't add up (iterative)
 
-With the analysis done, present your doubts with `AskUserQuestion` — in batches of up to 4 questions, most important first. Each question should:
+With the analysis done, present your doubts with `AskUserQuestion` — in batches of up to 4 questions, most important first, following CLAUDE.md "Questions to the user". Each question should:
 
-- Cite the code evidence that motivates it (e.g. "today `Xyz.createSomething` rejects amounts ≤ 0 — does this story keep that rule?").
+- Rest on code evidence: cite it (file, method, rule) in the chat message right before the call, and say it in plain words inside the question (e.g. chat: "`Xyz.createSomething` rejects amounts ≤ 0"; question: "Today the system rejects amounts of zero or less. Does this story keep that rule?").
 - Offer concrete options with their implications, not open-ended questions when it can be avoided.
 
 Explicitly flag **possible bugs**: if the description, applied as-is on top of the current code, would produce broken or contradictory behavior, say so as a risk and propose the alternative. If the exhaustive grep found behavior in another module the description doesn't account for, or `lessons-learned.md`/`decisions/` have something relevant to this zone, present it as a concrete question with the evidence cited — this is the most important part of this round, not an extra. Repeat the question round until no doubts remain that would change the design (usually 1-2 rounds; don't interrogate for sport — minor things can be left as "criterion to be defined by the implementer").
@@ -182,7 +184,7 @@ If nothing is left open, say so in one sentence — never invent a question or l
 
 ### Checkpoint A
 
-Ask with `AskUserQuestion`: **"Is the scope and are the decisions in this preview correct?"** — options **"Yes, prepare the final story"** / **"I want to adjust something"**.
+Ask with `AskUserQuestion` whether the scope and the decisions in the preview are correct, with two options: prepare the final story, or adjust something. Write the question and both options in the user's language (CLAUDE.md "Questions to the user").
 
 Each loop rereads the file, confirms it's still a valid `PREVIEW_DRAFT` for the right ID, incorporates the requested edit, and repeats. Checkpoint A never writes to the queue.
 
@@ -284,7 +286,7 @@ On every loop, after any edit:
 12. validate the optional-rules sections below are complete for whichever ones apply;
 13. only if everything passes, offer Checkpoint B.
 
-Ask: **"This is the exact story that will be added to requirements/<project>.md. Do you confirm it?"** — options **"Yes, add it"** / **"I want to adjust the wording"**.
+Ask whether the user confirms that this exact story is the one that will be added to `requirements/<project>.md`, with two options: add it, or adjust the wording. Write the question and both options in the user's language.
 
 Same in-memory-snapshot discipline as Checkpoint A: capture the exact content that passed the editorial pass and was shown to the user. After confirmation, reread immediately before persisting and repeat the validations — if the content differs from what was confirmed (even if still valid), go back to the loop and reconfirm; never persist a version different from the one actually confirmed. No durable hashing involved.
 
@@ -323,7 +325,7 @@ Same in-memory-snapshot discipline as Checkpoint A: capture the exact content th
 
 ### Editing a persisted story
 
-Only starts from state `PERSISTED_MATCH`, by the user's explicit choice ("Edit the existing story") — never inferred just because the text changed.
+Only starts from state `PERSISTED_MATCH`, by the user's explicit choice to edit the existing story — never inferred just because the text changed.
 
 1. Locate the single matching block by ID (reusing the position/count data from Step 1).
 2. Keep an in-memory copy of that exact block.

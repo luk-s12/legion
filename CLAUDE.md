@@ -367,8 +367,9 @@ Agents use these paths opaquely; they do not select projects or manage claims.
 Each story has a two-stage agent protocol: DESIGN_PROPOSED ends the writer's turn; approval starts
 implementation. The owner gives each proposal a level (normal, large or critical) from its risk checklist
 and runs `design-reviewer` only for critical stories. In plain `/legion` the owner approves normal stories
-on its own, and asks the user (one consolidated question) for large and critical ones, naming the level and
-the path of the design to review. In `/legion dry-run` every story stops at that consolidated gate (see the
+on its own, and asks the user (one consolidated round of questions, see "Questions to the user") for large
+and critical ones, after naming in the chat the level and the path of the design to review. In
+`/legion dry-run` every story stops at that consolidated gate (see the
 `/legion` skill). The owner checks project components, decisions and historical designs first. Divergences
 discovered later use a recorded project decision and correction order.
 
@@ -432,6 +433,98 @@ The global module registry is reread and safely replaced under `catalog.lock` us
 sibling candidate, exact rename and destination reread. No project mutex protects global metadata.
 Modules never write directly to Signals/Announcements; the orchestrator may escalate a report with
 cited origin.
+
+## Questions to the user
+
+Every question-tool call (`AskUserQuestion`) in every command follows these rules. The dialog shows the
+question as a single bold paragraph, so a long question becomes a wall of text that is hard to decide on.
+Line breaks inside an option's description show in the VS Code extension, but the terminal shows each
+description on one line and turns a line break into a stray symbol.
+
+- **Ask only what is the user's to decide**: business rules, accepting a risk, the scope of a story. A doubt
+  that an existing repo rule, recorded decision or established pattern already answers is applied by the
+  owner and reported in the chat. Fixing a design that broke a repo rule is not a question; making an
+  exception to that rule is.
+- **A chat message before every call, always.** Right before each question-tool call, write this message
+  in the chat, even when the question looks clear on its own. It is part of the question, not an optional
+  preface, and it overrides any default to keep text before a tool call short. People read it right
+  before choosing, and a long or roundabout text gets skipped and answered at random, so write only this,
+  one block per decision, with the labels in the user's language:
+
+  ```text
+  **<Story-ID>: <topic in a few words>**
+  - <a fact that changes the choice, one line; at most four of these>
+  <What the result looks like> with each option:
+  - <option label>: `<result in one line>`
+  <Reference>: <file paths and code names>
+  ```
+
+  The two result lines appear only when the options lead to a concrete result shown in the chat (see
+  "Concrete result"). Never narrate the format or the environment you chose, how you got there, or what
+  you are about to ask.
+- **Short question.** The question itself stands on its own in at most three short sentences: what
+  happens, why it matters (only when that is not obvious) and one direct question. Never paste paths,
+  method lists or a triage into it.
+- **One decision per question.** Two decisions are two questions in the same call.
+- **Plain words, correct grammar.** Full sentences in the user's language, one idea per sentence. No
+  internal codes (finding severities, rule or decision IDs) and no class, method or field names unless the
+  decision is about that exact name. An unavoidable technical term gets a short explanation in
+  parentheses the first time. Do not mix languages: use the word the user's language already has, not an
+  English term bent to fit it.
+- **Language.** Everything the user reads (the chat message, the question, the header and the options) is
+  in the user's language: the one they chose for the command, otherwise the one they write in. It can
+  differ from `prose_language`, which only decides the language of persisted files. A question, option or
+  report that a skill quotes in English fixes its meaning, not its wording: write it in the user's language.
+- **Header**: the story ID, or one or two plain words naming the topic.
+- **Options**: the label is a short action in plain words. The description holds these items, labeled in
+  the user's language and in this order: why choose it, its risk, the work it adds, and whether it can be
+  undone when that matters (data written to logs, migrations, public contracts). When your system context
+  says you run in the VS Code extension, put each item on its own line; anywhere else (the terminal, an
+  unknown host), keep them on one line separated by " · ". Every option fills the same items, the
+  recommended one included, so they can be compared and none looks free. The recommended option goes
+  first, marked in the user's language, and its first item is the reason for the recommendation.
+- **Concrete result**: when the options lead to something the user can look at, show it for each
+  option; never for options that differ only in prose. Build it from the real code; when the code does
+  not show the exact shape, still write it and mark it as approximate. Never skip it. Use the dialog's
+  `preview` (single-choice questions, any host) for a JSON or other data structure (a request or
+  response body, an event, a stored document) and for a simple decision whose options are best compared
+  by sight (a screen layout, the wording of a message, an output format). Show only the part that changes
+  between options, at most about eight lines, with `…` for the rest: the terminal cuts a long preview,
+  and it hides the option descriptions while a preview is shown. Anything else (a log line, a config
+  value, a short code fragment) goes in the result lines of the chat message.
+
+Example, for a user who writes in English (with any other user, every label and sentence follows their
+language). Instead of asking "PROJ-12: displayName (free text that may include people's names) in the
+logs. You asked to include it in the log.error of the handler without parentId. The review noticed that…",
+write in the chat:
+
+```markdown
+**PROJ-12: display name in the logs**
+- The error log would write it in full when a request arrives without a parent record.
+- The request log already writes it today, on every request.
+
+What the error log looks like with each option:
+- Log only whether it exists: `ERROR request without parent · hasDisplayName=true`
+- Log the full name: `ERROR request without parent · displayName="Jane Doe"`
+- Remove it from both logs: `ERROR request without parent`
+
+Reference: log.error in the handler without parentId · INFO log of the incoming request
+```
+
+and ask: "The display name can include people's names, and what reaches the logs cannot be erased later.
+The story asks to write it in the error log, and another log already writes it on every request. What do
+we do with it?". The recommended option, in VS Code:
+
+```text
+Log only whether it exists (Recommended)
+Why: the error can be investigated without storing names.
+Risk: the other log still stores them.
+Work: none extra.
+Can be undone: yes.
+```
+
+In the terminal, the same description on one line: "Why: the error can be investigated without storing
+names. · Risk: the other log still stores them. · Work: none extra. · Can be undone: yes."
 
 ## Hard rules
 

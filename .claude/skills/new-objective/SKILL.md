@@ -49,7 +49,7 @@ Apply these splitting criteria, in order:
 4. **Reasonable size**: neither an entire objective as one giant story (loses parallelism) nor User Stories so small that coordinating them costs more than the work itself. More than ~8-10 candidates is a sign of over-decomposition — consider grouping.
 5. **Business-order dependencies**: if a candidate doesn't make sense before another exists (even if they don't share code), that's a real dependency — it's declared with `## Depends on` in the final story, it doesn't change the split itself.
 
-Present the proposal with concrete evidence per candidate (file/line/real behavior found), in a report like:
+Present the proposal with concrete evidence per candidate (file/line/real behavior found), in a report shaped like this one, written in the user's language:
 
 ```
 I propose splitting it into N User Stories:
@@ -66,7 +66,7 @@ Does this split make sense? I can merge, split further, remove one, or add somet
 
 ## Step 5 — Confirm the split
 
-`AskUserQuestion` with options: **Confirm as is** / **Adjust** (the user states what to change, in free text) / **Rethink** (if the user gives business context the code couldn't show, go back to Step 4 with that incorporated).
+`AskUserQuestion`, written in the user's language, with these options: **Confirm as is** / **Adjust** (the user states what to change, in free text) / **Rethink** (if the user gives business context the code couldn't show, go back to Step 4 with that incorporated).
 
 With the split confirmed, persist it **immediately** — before specifying any story in detail — in `.orchestrator/projects/<project>/objectives/OBJ-<NNN>.md` (next available number):
 

@@ -286,7 +286,7 @@ means every story of every project that ever uses this module gets its skills/ru
 its prompt automatically, with no per-story `## Modules` mention needed. `opt-in` doesn't need
 this — it's the expected behavior already.
 
-Then ask with `AskUserQuestion`:
+Then ask with `AskUserQuestion`, written in the user's language, with these options:
 - **Register as-is**
 - **Register trimming `Tools:`** to only what's classified as known-safe — if the tool being
   trimmed appears as used by the agent in Step 3's cross-check, warn explicitly first that
@@ -315,8 +315,8 @@ Clamp `max_rejection_rounds` (if declared, `type: gate` only) to the core three-
 
 ## Step 7 — Signal capture (optional, skippable)
 
-After the decision, one more short `AskUserQuestion` (multiSelect, skippable): *"What helped you
-decide?"* — options: manifest/tools classification, network scan, dependency scan, full agent
+After the decision, one more short `AskUserQuestion` (multiSelect, skippable), in the user's language:
+*"What helped you decide?"* — options: manifest/tools classification, network scan, dependency scan, full agent
 content, something else. Append the answer (or "skipped") as a new row to the tracking table in
 `mejoras-pendientes-modules.md` (item 1) at the repo root, if that file exists — this is
 lightweight signal capture for tuning the preview format later, not a blocking step; if the file
