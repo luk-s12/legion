@@ -183,14 +183,16 @@ project's real migration ordering rule. Never invent a migration tool.
 ## Module stages
 
 Before design, resolve modules named by the story plus installed `default_activation: always`
-gates. Recompute each installed module source hash and stop for explicit update/risk review on a
-mismatch. For `provides_rules`, negotiate only new/changed rules for the selected project, resolve
+gates. Run each one's version check (`run-module/SKILL.md`, "Step 2 — Version/contract check") and
+stop for explicit update/risk review on a mismatch. For `provides_rules`, negotiate only new/changed rules for the selected project, resolve
 module-vs-module or module-vs-repo conflicts, persist the verdict project-scoped and embed accepted
 rules in the design. Pass selected `provides_skills` as read-only guidance.
 
 At each declared stage, launch a gate with exactly its registered tools and declared write zone,
 record pre/post diffs, and require its report at
-`modules/reports/<module>/<project>/<Story-ID>-R<n>.md`. Blocking rejection shares the core
+`modules/reports/<module>/<project>/<Story-ID>-R<n>.md`, passing that exact path in the prompt as
+overriding any report path in the module's own files (its installed name can differ from its own,
+e.g. `<repo>_<subfolder>`). Blocking rejection shares the core
 three-round correction budget; non-blocking output becomes reviewer advisory input. An explicitly
 named implementer module authors only its assigned story worktree/subtask and follows the normal
 design and core review gates. A module never replaces `worktree-reviewer` or writes directly to

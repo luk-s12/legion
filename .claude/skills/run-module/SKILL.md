@@ -36,13 +36,24 @@ see `new-story/SKILL.md`) — this is the only way a `generator` ever runs.
 
 ## Step 2 — Version/contract check
 
-Same source-hash check described in `legion/SKILL.md`, "Module stages" — this is
-one mechanism triggered by "about to launch this module's code", regardless of the entry point:
-recompute the source content hash (`module.md` + `agent_entrypoint` + `provides_rules` +
-`provides_skills`, re-resolved fresh from `source` in `modules/installed/<name>/.legion-source.md`)
-and compare it to the recorded `source_hash`. If it differs, `AskUserQuestion` to update (never
-automatic) and re-run `/new-module`'s risk-preview flow if `tools`/`output`/`type` changed. If the
-module is `deprecated` in `modules/registry.md`, reject with that reason instead of running it.
+This is the one normative version check, triggered by "about to launch this module's code"
+regardless of the entry point — `legion/SKILL.md`, "Module stages", runs this same check before a
+story's design. Read `modules/installed/<name>/.legion-source.md`, stage a fresh copy of
+`source_repo` at `source_ref` in a temporary folder, take the module at `source_subdir`, recompute
+its fingerprint with the recorded `hash_scheme` (defined in `new-module/SKILL.md`, "Record a source
+fingerprint") and compare it to `source_hash`; delete the staging copy afterward. If it differs,
+`AskUserQuestion` to update (never automatic). A confirmed update reruns `/new-module`'s
+best-effort scan (Step 4) — the change can live in a file the manifest never names — plus its full
+risk preview if `tools`/`output`/`type` changed, then replaces the installed copy and rewrites
+`.legion-source.md` in the current format. If the module is `deprecated` in `modules/registry.md`,
+reject with that reason instead of running it.
+
+A record without `hash_scheme` predates `tree-v1`: it hashed only `module.md` +
+`agent_entrypoint` + `provides_rules` + `provides_skills`, concatenated in that order, and has no
+`source_repo`/`source_ref`/`source_subdir`. Compare it with that same legacy recipe, resolving
+`source` and locating the module exactly as `/new-module` Step 1 does (root, single subfolder
+match, or the `<subfolder>` of a `<repo>_<subfolder>` name); a confirmed update rewrites the record
+as `tree-v1`.
 
 ## Step 3 — Launch
 
@@ -60,6 +71,9 @@ module is `deprecated` in `modules/registry.md`, reject with that reason instead
     part of that story's cycle) + `OUTPUT`. Rule: "read from the worktree, never modify it; write
     artifacts to `OUTPUT` and your own execution report to
     `modules/reports/<module-name>/<project>/<timestamp>.md` — those are the only two write zones."
+  - Both modes add: "`OUTPUT` and that report path override any output or report path written in
+    your own instructions — you are installed as `<module-name>`." The installed name can differ
+    from the one the module uses for itself (a multi-module repo installs as `<repo>_<subfolder>`).
   - Neither mode gets the module's internal `CLAUDE.md` read or passed — same as `gate` modules.
 - **Isolation check, `scope: base-repo` only**: `git -C workspace/<repo_dir> status --porcelain`
   before and after the run. Anything new that isn't exactly what `output` declares (which lives

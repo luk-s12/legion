@@ -26,7 +26,7 @@ modules/
 ├── installed/         # the external repos themselves — NEVER edited by hand, gitignored
 │   └── <module-name>/
 │       ├── module.md                  # manifest (see format below)
-│       ├── .legion-source.md          # Legion's own bookkeeping: source + content hash (never written by the module author)
+│       ├── .legion-source.md          # Legion's own bookkeeping: repo/ref/subfolder + hash of every module file (never written by the module author)
 │       ├── .claude/agents/<agent>.md  # the agent(s) the module brings
 │       └── .claude/skills/<skill>/    # optional module-specific guide
 ├── reports/            # results namespaced by module and project — written by the module's own agent
@@ -72,6 +72,11 @@ things that aren't obvious from the manifest format alone:
   `WORKTREE` path already given in the prompt is the correct, isolated location — passing
   `isolation: "worktree"` on top of it makes the module work in the wrong place instead.
 
+The prompt's paths also override the module's own. A module installed from a multi-module repo
+runs as `<repo>_<subfolder>`, not under the name it uses for itself, so an output or report path
+written in its own files can point at the wrong folder. The prompt passes the exact `OUTPUT` and
+report path and says they override any path in the module's own instructions.
+
 ## Installing / removing a module
 
 - **`/new-module <repo-or-path>`** — clones the module, validates its manifest, runs a
@@ -84,8 +89,9 @@ things that aren't obvious from the manifest format alone:
   summary of which got registered/discarded/skipped. See `new-module/SKILL.md`, Step 1.
   `modules/installed/<name>/` ends up as a **plain copy**, deliberately with no `.git` of its
   own; a `.legion-source.md` sidecar file (Legion's own bookkeeping, never read by the module
-  itself) records `source` + a content hash, which is what the later version/contract check
-  compares against — see "Re-negotiation by version" above.
+  itself) records where the module came from — repo, ref and, in a multi-module repo, its
+  subfolder — plus a hash of every file in the module, which is what the later version/contract
+  check compares against — see "Re-negotiation by version" above.
 - **`/module uninstall <name>`** — marks it `deprecated` if any active story still references
   it, or removes it for good (with confirmation) once nothing does.
 - **`/module activate <name>`** — reverses a `deprecated` module back to `installed` (does
@@ -247,10 +253,12 @@ its own real rules.
   negotiated them) — the rest keep their existing verdict. See `legion/SKILL.md`, "Module stages"
   (version/contract check). That check is **hash-based, not `git fetch`-based**: `modules/
   installed/<name>/` is a plain copy on purpose (see "Installing / removing a module" below), so there's no
-  `.git` there to fetch against. `/new-module` records a content hash of the module's own files
-  in `modules/installed/<name>/.legion-source.md` at install time; the version check re-resolves
-  `source` fresh and compares hashes, regardless of whether `source` was a git URL or a local
-  path — one mechanism for both.
+  `.git` there to fetch against. `/new-module` records a hash of every file of the module —
+  internal skills, schemas and scripts included, not only the files the manifest declares — in
+  `modules/installed/<name>/.legion-source.md` at install time, together with the repo, ref and
+  subfolder it came from; the version check re-resolves that exact location fresh and compares
+  hashes, regardless of whether the source was a git URL or a local path — one mechanism for both
+  (scheme in `new-module/SKILL.md`, "Record a source fingerprint").
 - **Manual re-negotiation**: `/module renegotiate <name> [rule_id]` reopens the question for the
   **current** project without waiting for a version change. It rereads `module.md` and the exact
   module-root-relative file declared by `provides_rules` after revalidating that the path exists

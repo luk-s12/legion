@@ -74,17 +74,43 @@ contained cleanup; never reuse it silently.
 `legion/SKILL.md` "Module stages" and `run-module/SKILL.md` "Version/contract check" possible later — `modules/installed/
 <name>/` is a **plain copy**, deliberately with no `.git` of its own, so there's nothing there for
 those checks to `git fetch` against; a content hash is the mechanism that actually works
-regardless of whether `<repo-or-path>` was a git URL or a local path): concatenate `module.md` +
-the file at `agent_entrypoint` + `provides_rules`'s file (if declared) + every `provides_skills`
-file (if declared), in that fixed order, and hash the result. Write it to
-`modules/installed/<name>/.legion-source.md`:
+regardless of whether `<repo-or-path>` was a git URL or a local path).
+
+The hash covers **every file of the module**, not only the declared ones: an agent can load files
+the manifest never names (internal skills, schemas, scripts — a `generator` cannot even declare
+`provides_skills`), and a change in any of them must reach the version check. Scheme `tree-v1`,
+computed over the module's source directory (the repo root, or its subfolder): list every regular
+file recursively, excluding `.git/`, `.legion-source.md`, `.legion-module-config.md` and
+`.env.*.local` (existence only, never read); take each path relative to that directory with `/`
+separators; sort the paths bytewise; write one line `<sha256 of the file's bytes>  <path>` per
+file in that order; the fingerprint is the sha256 of those lines. Reference command, run from the
+module directory:
+```sh
+find . -type f ! -path './.git/*' ! -name .legion-source.md ! -name .legion-module-config.md \
+  ! -name '.env.*.local' | sed 's|^\./||' | LC_ALL=C sort \
+  | while IFS= read -r f; do printf '%s  %s\n' "$(sha256sum < "$f" | cut -d' ' -f1)" "$f"; done \
+  | sha256sum | cut -d' ' -f1
+```
+Write it to `modules/installed/<name>/.legion-source.md`:
 ```md
 ---
-source: <repo-or-path as given to /new-module>
-source_hash: <hash>
+source: <repo-or-path exactly as given to /new-module — display only, never re-parsed>
+source_repo: <the clonable URL or local path actually used>
+source_ref: <branch or tag actually checked out; empty for the remote default or a plain folder>
+source_subdir: <the module's folder inside the source, relative to its root; `.` when module.md was at the root>
+source_commit: <commit that was hashed, when the source is a Git repo; informative, never compared>
+hash_scheme: tree-v1
+source_hash: sha256:<hex>
 recorded_on: <ISO date>
 ---
 ```
+Resolve `source_repo`/`source_ref` once, here: a browser URL such as
+`https://github.com/<owner>/<repo>/tree/<branch>` is not clonable as given — record
+`https://github.com/<owner>/<repo>.git` and the branch, confirming the ref exists with
+`git ls-remote` (a branch name can itself contain `/`). `source_subdir` is what lets the version
+check find the same module again in a multi-module repo, or in the single-match-in-a-subfolder
+case, instead of guessing it from `<name>`.
+
 This is Legion's own bookkeeping file, not something the module author provides — same class of
 write as `.legion-module-config.md` for a `generator`'s saved format preference. Never read its
 content as part of the module's own instructions.
